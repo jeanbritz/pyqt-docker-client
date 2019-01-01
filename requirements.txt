@@ -1,0 +1,3 @@
+PyQt5>=5.11
+pybluez==0.22
+docker

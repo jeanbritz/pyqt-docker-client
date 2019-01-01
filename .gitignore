@@ -16,3 +16,6 @@ venv.bak/
 
 # Log files
 *.log
+
+# IntelliJ IDE Files
+.idea
