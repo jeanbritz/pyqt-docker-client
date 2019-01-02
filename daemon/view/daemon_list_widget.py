@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QListWidget,QListWidgetItem
+from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 
 
 class DockerDaemonListWidget(QListWidget):

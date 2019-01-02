@@ -1,14 +1,20 @@
 import logging
-
+import logging.config
+import yaml
 
 class Log:
 
     def __init__(self):
+        with open('config/logging.yml', 'r') as f:
+            config = yaml.safe_load(f.read())
+            logging.config.dictConfig(config)
+
         global logger
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger()
+
 
     @staticmethod
-    def i(self, msg=None):
+    def i(msg=None):
         """
         Log info message
         :param self:
@@ -18,5 +24,21 @@ class Log:
         logger.info(msg)
 
     @staticmethod
-    def e(self, msg=None):
-        self.logger.error(msg)
+    def e(msg=None):
+        """
+        Log error message
+        :param self:
+        :param msg:
+        :return:
+        """
+        logger.error(msg, exc_info=True)
+
+    @staticmethod
+    def w(msg=None):
+        """
+        Log warning message
+        :param self:
+        :param msg:
+        :return:
+        """
+        logger.warning(msg)

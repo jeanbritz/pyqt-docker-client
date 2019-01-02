@@ -4,12 +4,16 @@ class Strings:
     READY = "Ready"
     ABOUT = "About"
 
-    # Toolbar Actions
+    # Menubar Actions
     ADD_ACTION = "&Add"
     OPEN_ACTION = "&Open"
     EXIT_ACTION = "E&xit"
     HELP_ACTION = "&Help"
 
+    # Toolbar Actions
+    CONNECT_ACTION = "Connect"
+
+    # Common Terms
     DAEMONS = "Daemons"
     IMAGES = "Images"
     CONTAINERS = "Containers"
@@ -19,4 +23,5 @@ class Strings:
 
     # Info Messages
     DOCKER_TRY_CONNECT = "Connecting to Docker Daemon at tcp://%s:%d"
-
+    DOCKER_CONNECTED = "Connected"
+    DOCKER_DISCONNECT = "Disconnected from Docker Daemon"
