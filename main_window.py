@@ -6,6 +6,7 @@ from docker.errors import DockerException
 from collections import namedtuple
 
 from daemon.view.daemon_list_widget import *
+from daemon.view.daemon_connect_dialog import DaemonConnectDialog
 
 from image.view.image_list_widget import *
 from image.view.image_detail_view import DockerImageDialog
@@ -14,12 +15,13 @@ from debug_console_widget import *
 
 from db.db_connection import *
 from toolbar.default_toolbar import DefaultToolbar
-
+from default_status_bar import DefaultStatusBar
 from strings import Strings
 from util.log import Log
 from container.container_list_widget import DockerContainerListWidget
 from docker_manager import DockerManager
 from signal.general_signal import GeneralSignals
+
 
 class MainWindow(QMainWindow):
 
@@ -36,6 +38,7 @@ class MainWindow(QMainWindow):
         self.help_menu: QMenuBar = None
 
         self.toolbar: DefaultToolbar = None
+        self.status_bar: DefaultStatusBar = None
 
         self.image_list_widget: DockerImageListWidget = None
         self.image_detail_view: DockerImageDialog = None
@@ -45,6 +48,8 @@ class MainWindow(QMainWindow):
         self.docker_manager: DockerManager = DockerManager()
 
         self.general_signals = GeneralSignals()
+
+        self.daemon_connect_dialog: DaemonConnectDialog = None
 
         self.db = self.init_db()
         self.init_ui()
@@ -63,7 +68,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(Strings.READY)
         self.file_menu = self.menuBar().addMenu(Strings.FILE_MENU)
         self.file_menu.addAction(QAction(Strings.ADD_ACTION, self))
-        self.file_menu.addAction(QAction(Strings.OPEN_ACTION, self))
+        self.file_menu.addAction(QAction(Strings.OPEN_ACTION, self, triggered=self.open_dialog))
         self.file_menu.addAction(QAction(Strings.EXIT_ACTION, self, triggered=self.close))
 
         self.help_menu = self.menuBar().addMenu("Help")
@@ -79,6 +84,7 @@ class MainWindow(QMainWindow):
         self.add_debug_console(debug=self.debug)
 
         self.init_toolbar()
+        self.init_status_bar()
 
     def init_db(self):
         db = DatabaseConnection()
@@ -89,6 +95,11 @@ class MainWindow(QMainWindow):
         self.toolbar = DefaultToolbar(self)
         self.general_signals.daemon_selected_signal.connect(self.toolbar.on_daemon_selected)
         self.addToolBar(self.toolbar)
+
+    def init_status_bar(self):
+        self.status_bar = DefaultStatusBar(self)
+        self.docker_manager.signals().connect_signal.connect(self.status_bar.on_stats_update)
+        self.setStatusBar(self.status_bar)
 
     def add_docker_daemons_view(self):
         dock = QDockWidget(Strings.DAEMONS, self)
@@ -147,18 +158,22 @@ class MainWindow(QMainWindow):
     def about(self):
         QMessageBox.about(Strings.ABOUT, "Testing Qt's Capabilities")
 
+    def open_dialog(self):
+        self.daemon_connect_dialog = DaemonConnectDialog()
+        self.daemon_connect_dialog.open()
+
     def close(self):
         super().close(self)
-        self.docker_disconnect(self.docker_manager)
+        self.docker_manager.disconnect()
 
     def closeEvent(self, *args, **kwargs):
-        '''
+        """
         This function is called when this window is about to be closed
         :param args:
         :param kwargs:
         :return:
-        '''
-        self.docker_disconnect(self.docker_manager)
+        """
+        self.docker_manager.disconnect()
 
 
 fake_tb = namedtuple('fake_tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
