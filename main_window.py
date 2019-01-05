@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
 
     def init_db(self):
         db = DatabaseConnection()
-        db.create_docker_daemon_table(drop_first=True)
+        db.create_tables(drop_first=True)
         return db
 
     def init_toolbar(self):
@@ -159,7 +159,8 @@ class MainWindow(QMainWindow):
         QMessageBox.about(Strings.ABOUT, "Testing Qt's Capabilities")
 
     def open_dialog(self):
-        self.daemon_connect_dialog = DaemonConnectDialog()
+        self.daemon_connect_dialog = DaemonConnectDialog(parent=self, db_connection=self.db,
+                                                         docker_manager=self.docker_manager)
         self.daemon_connect_dialog.open()
 
     def close(self):
@@ -186,7 +187,7 @@ def excepthook(exec_type, exec_value, exec_tb):
     traceback.print_exception(exec_type, exec_value, enriched_tb)
 
 
-def _add_missing_frames(tb:fake_tb=None):
+def _add_missing_frames(tb: fake_tb = None):
     result = fake_tb(tb.tb_frame, tb.tb_lasti, tb.tb_lineno, tb.tb_next)
     frame = tb.tb_frame.f_back
     while frame:

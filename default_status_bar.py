@@ -18,6 +18,6 @@ class DefaultStatusBar(QStatusBar):
         self.text = QLabel("Status")
         self.addPermanentWidget(self.text, 0)
 
-    @pyqtSlot(name=DockerSignals.DOCKER_STATUS_UPDATE_SIGNAL)
+    @pyqtSlot(name=DockerSignals.DOCKER_CONNECT_SIGNAL)
     def on_stats_update(self):
         self.text.setText("Connected")
