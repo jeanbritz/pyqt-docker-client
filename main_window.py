@@ -1,11 +1,7 @@
 import sys
 import traceback
-import docker
-from PyQt5.QtCore import Qt,pyqtSlot, QMetaObject
-from docker.errors import DockerException
 from collections import namedtuple
 
-from daemon.view.daemon_list_widget import *
 from daemon.view.daemon_connect_dialog import DaemonConnectDialog
 
 from image.view.image_list_widget import *
@@ -46,12 +42,13 @@ class MainWindow(QMainWindow):
         self.container_list_widget: DockerContainerListWidget = None
 
         self.docker_manager: DockerManager = DockerManager()
+        self.db: DatabaseConnection = None
 
         self.general_signals = GeneralSignals()
 
         self.daemon_connect_dialog: DaemonConnectDialog = None
 
-        self.db = self.init_db()
+        self.init_db()
         self.init_ui()
 
     def on_connect(self):
@@ -67,8 +64,8 @@ class MainWindow(QMainWindow):
         # self.setCentralWidget(self.textEdit)
         self.statusBar().showMessage(Strings.READY)
         self.file_menu = self.menuBar().addMenu(Strings.FILE_MENU)
-        self.file_menu.addAction(QAction(Strings.ADD_ACTION, self))
-        self.file_menu.addAction(QAction(Strings.OPEN_ACTION, self, triggered=self.open_dialog))
+        # self.file_menu.addAction(QAction(Strings.ADD_ACTION, self))
+        self.file_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_dialog))
         self.file_menu.addAction(QAction(Strings.EXIT_ACTION, self, triggered=self.close))
 
         self.help_menu = self.menuBar().addMenu("Help")
@@ -77,7 +74,6 @@ class MainWindow(QMainWindow):
                                          triggered=QApplication.instance().aboutQt))
         self.help_menu.addAction(QAction("About Application", self, triggered=self.about))
 
-        self.add_docker_daemons_view()
         self.add_docker_images_view()
         self.add_docker_container_view()
 
@@ -87,9 +83,8 @@ class MainWindow(QMainWindow):
         self.init_status_bar()
 
     def init_db(self):
-        db = DatabaseConnection()
-        db.create_tables(drop_first=True)
-        return db
+        self.db = DatabaseConnection()
+        self.db.create_tables(drop_first=True)
 
     def init_toolbar(self):
         self.toolbar = DefaultToolbar(self)
@@ -100,34 +95,6 @@ class MainWindow(QMainWindow):
         self.status_bar = DefaultStatusBar(self)
         self.docker_manager.signals().connect_signal.connect(self.status_bar.on_stats_update)
         self.setStatusBar(self.status_bar)
-
-    def add_docker_daemons_view(self):
-        dock = QDockWidget(Strings.DAEMONS, self)
-        widget = DockerDaemonListWidget()
-        for id, hostname, port in self.db.get_docker_daemons():
-            item = DockerDaemonListWidgetItem()
-            item.setText(str(id) + " - " + hostname + ':' + str(port))
-            item.setData(Qt.UserRole, {'id': id,
-                                       'hostname': hostname,
-                                       'port': port})
-            widget.addItem(item)
-        widget.itemClicked.connect(self.on_daemon_selected)
-        dock.setWidget(widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock)
-
-    def on_daemon_selected(self, curr=None, prev=None):
-        data = curr.data(Qt.UserRole)
-        hostname = data['hostname']
-        port = data['port']
-        self.general_signals.daemon_selected_signal.emit(data)
-        # self.debug.println(Strings.DOCKER_TRY_CONNECT % (hostname, port))
-        # self.docker_client = self.docker_connect(hostname, port)
-        # if self.docker_client is not None:
-        #     signal = DockerSignal()
-        #     signal.refresh_images_signal.connect(self.refresh_images)
-        #     signal.refresh_images_signal.emit(self.docker_client.images.list(all=True))
-        #     signal.refresh_containers_signal.connect(self.refresh_containers)
-        #     signal.refresh_containers_signal.emit(self.docker_client.containers.list(all=True))
 
     def on_image_clicked(self, item:DockerImageListWidgetItem = None):
         self.image_detail_view.set_data(item.data(Qt.UserRole).attrs)
