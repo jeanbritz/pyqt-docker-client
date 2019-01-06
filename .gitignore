@@ -12,7 +12,7 @@ env.bak/
 venv.bak/
 
 # SQLite Database
-.db
+*.db
 
 # Log files
 *.log
