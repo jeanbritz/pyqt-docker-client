@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel
 from PyQt5.QtCore import pyqtSlot
 
-from signal.docker_signal import DockerSignals
+from signal import DockerSignals
 
 
 class DefaultStatusBar(QStatusBar):
@@ -12,7 +12,6 @@ class DefaultStatusBar(QStatusBar):
         self.text: QLabel = None
 
         self.init_ui()
-
 
     def init_ui(self):
         self.text = QLabel("Status")

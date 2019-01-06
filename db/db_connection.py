@@ -54,17 +54,6 @@ class DatabaseConnection:
     def get_connection(self):
         return self.db
 
-    def get_docker_daemons(self):
-        result = []
-        query = QSqlQuery(self.db)
-        query.exec("select * from docker_daemons")
-        rec = query.record()
-        while query.next():
-            result.append((query.value(rec.indexOf("id")),
-                          query.value(rec.indexOf("hostname")),
-                          query.value(rec.indexOf("port"))))
-        return result
-
     def get_environments(self):
         result = {}
         query = QSqlQuery(self.db)

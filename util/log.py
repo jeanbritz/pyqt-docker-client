@@ -2,6 +2,7 @@ import logging
 import logging.config
 import yaml
 
+
 class Log:
 
     def __init__(self):
@@ -11,7 +12,6 @@ class Log:
 
         global logger
         logger = logging.getLogger()
-
 
     @staticmethod
     def i(msg=None):

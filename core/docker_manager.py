@@ -5,6 +5,7 @@ from util.log import Log
 from signal.docker_signal import DockerSignals
 from docker.errors import DockerException
 
+
 class DockerManager:
 
     DISCONNECTED = 0
@@ -16,10 +17,8 @@ class DockerManager:
         self._signals = DockerSignals()
 
     def connect(self, timeout=120, version='auto', env=None):
-        #base_url = "tcp://%s:%d" % (hostname, port)
         kwargs = {'timeout': timeout, 'version': version, 'environment': env}
         try:
-            #self._client = docker.DockerClient(base_url=base_url, version=version)
             self._client = docker.DockerClient.from_env(**kwargs)
             self._signals.connect_signal.emit()
             self._signals.refresh_images_signal.emit(self._client.images.list(all=True))

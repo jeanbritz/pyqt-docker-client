@@ -3,11 +3,12 @@ from PyQt5.QtWidgets import QDialog, QLayout, QGroupBox, QVBoxLayout, QFormLayou
 from PyQt5.QtCore import Qt
 import os
 
-class DaemonConnectDialog(QDialog):
+
+class EnvConnectDialog(QDialog):
 
     def __init__(self, parent=None, db_connection=None, docker_manager=None):
         # super().__init__(parent=None, flags=(Qt.Window | Qt.WindowStaysOnTopHint))
-        super(DaemonConnectDialog, self).__init__(parent)
+        super(EnvConnectDialog, self).__init__(parent)
         self.setWindowIcon(parent.windowIcon())
 
         self._docker_manager = docker_manager

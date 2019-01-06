@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 from PyQt5.QtCore import pyqtSlot, Qt
 
-from signal.docker_signal import DockerSignals
+from signal import DockerSignals
 
 
 class DockerContainerListWidget(QListWidget):
@@ -15,7 +15,6 @@ class DockerContainerListWidget(QListWidget):
         for container in containers:
             item = DockerContainerListWidgetItem()
             item.setText(container.name)
-            print (container.attrs)
             item.setData(Qt.UserRole, container)
             self.addItem(item)
 

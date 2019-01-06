@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QToolBar, QAction, QVBoxLayout
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
 
-from util.log import Log
-from strings import Strings
-from signal.general_signal import GeneralSignals
+from util import Log
+from i18n import Strings
+from signal import GeneralSignals
 
 
 class DefaultToolbar(QToolBar):

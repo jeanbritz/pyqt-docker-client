@@ -2,21 +2,20 @@ import sys
 import traceback
 from collections import namedtuple
 
-from daemon.view.daemon_connect_dialog import DaemonConnectDialog
+from PyQt5.Qt import QIcon, Qt, QEvent, QObject
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
 
-from image.view.image_list_widget import *
-from image.view.image_detail_view import DockerImageDialog
-
-from debug_console_widget import *
-
-from db.db_connection import *
-from toolbar.default_toolbar import DefaultToolbar
+from environment.view import EnvConnectDialog
+from image.view import DockerImageListWidget, DockerImageListWidgetItem, DockerImageDialog
+from debug_console_widget import DebugConsoleWidget
+from db import DatabaseConnection
+from toolbar import DefaultToolbar
 from default_status_bar import DefaultStatusBar
-from strings import Strings
-from util.log import Log
-from container.container_list_widget import DockerContainerListWidget
-from docker_manager import DockerManager
-from signal.general_signal import GeneralSignals
+from i18n import Strings
+from util import Log
+from container import DockerContainerListWidget, ContainerConsoleDockWidget, ContainerDockWidget
+from core import DockerManager
+from signal import GeneralSignals
 
 
 class MainWindow(QMainWindow):
@@ -39,17 +38,20 @@ class MainWindow(QMainWindow):
         self.image_list_widget: DockerImageListWidget = None
         self.image_detail_view: DockerImageDialog = None
 
-        self.container_list_widget: DockerContainerListWidget = None
+        self.container_dock_widget: DockerContainerListWidget = None
+        self.container_console_widget: ContainerConsoleDockWidget = None
 
         self.docker_manager: DockerManager = DockerManager()
         self.db: DatabaseConnection = None
 
         self.general_signals = GeneralSignals()
 
-        self.daemon_connect_dialog: DaemonConnectDialog = None
+        self.daemon_connect_dialog: EnvConnectDialog = None
 
         self.init_db()
         self.init_ui()
+
+        self.installEventFilter(self)
 
     def on_connect(self):
         self.debug.println('Connected!')
@@ -60,9 +62,6 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon('assets/docker.svg'))
         self.setGeometry(self.top, self.left, self.width, self.height)
 
-        # self.textEdit = QTextEdit()
-        # self.setCentralWidget(self.textEdit)
-        self.statusBar().showMessage(Strings.READY)
         self.file_menu = self.menuBar().addMenu(Strings.FILE_MENU)
         # self.file_menu.addAction(QAction(Strings.ADD_ACTION, self))
         self.file_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_dialog))
@@ -76,6 +75,7 @@ class MainWindow(QMainWindow):
 
         self.add_docker_images_view()
         self.add_docker_container_view()
+        self.add_container_console_view()
 
         self.add_debug_console(debug=self.debug)
 
@@ -110,12 +110,14 @@ class MainWindow(QMainWindow):
         self.image_detail_view = DockerImageDialog()
 
     def add_docker_container_view(self):
-        self.container_list_widget = DockerContainerListWidget()
-        self.docker_manager.signals().refresh_containers_signal.connect(self.container_list_widget.refresh_containers)
+        self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS)
+        self.docker_manager.signals().refresh_containers_signal.connect(self.container_dock_widget.list_widget()
+                                                                        .refresh_containers)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.container_dock_widget)
 
-        dock = QDockWidget(Strings.CONTAINERS, self)
-        dock.setWidget(self.container_list_widget)
-        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+    def add_container_console_view(self):
+        self.container_console_widget = ContainerConsoleDockWidget("Work Area")
+        self.setCentralWidget(self.container_console_widget)
 
     def add_debug_console(self, debug=None):
         dock = QDockWidget("Debug Console", self)
@@ -126,8 +128,8 @@ class MainWindow(QMainWindow):
         QMessageBox.about(Strings.ABOUT, "Testing Qt's Capabilities")
 
     def open_dialog(self):
-        self.daemon_connect_dialog = DaemonConnectDialog(parent=self, db_connection=self.db,
-                                                         docker_manager=self.docker_manager)
+        self.daemon_connect_dialog = EnvConnectDialog(parent=self, db_connection=self.db,
+                                                      docker_manager=self.docker_manager)
         self.daemon_connect_dialog.open()
 
     def close(self):
@@ -142,6 +144,12 @@ class MainWindow(QMainWindow):
         :return:
         """
         self.docker_manager.disconnect()
+
+        def eventFilter(self, object: QObject = None, event: QEvent = None):
+            super().eventFilter(object, event)
+            print('Event %s, Object %s' % (event, object))
+            return False
+
 
 
 fake_tb = namedtuple('fake_tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
@@ -169,9 +177,12 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     Log.i('Process ID %s' % app.applicationPid())
 
+    app.setStyle('Fusion')
+    app.focusWidget()
     window = MainWindow()
-    window.show()
     app.setActiveWindow(window)
+    window.show()
+
    # sys.excepthook = excepthook
     sys.exit(app.exec_())
 

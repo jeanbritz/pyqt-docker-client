@@ -1,7 +1,6 @@
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 from PyQt5.QtCore import pyqtSlot, Qt
 
-from signal.docker_signal import DockerSignals
 
 class DockerImageListWidget(QListWidget):
 
