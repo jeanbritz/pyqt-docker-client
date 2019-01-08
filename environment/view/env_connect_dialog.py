@@ -1,7 +1,10 @@
+import os
+
 from PyQt5.QtWidgets import QDialog, QLayout, QGroupBox, QVBoxLayout, QFormLayout, QLabel, QLineEdit, QCheckBox,\
     QDialogButtonBox, QComboBox
 from PyQt5.QtCore import Qt
-import os
+
+from util import Log
 
 
 class EnvConnectDialog(QDialog):
@@ -93,8 +96,9 @@ class EnvConnectDialog(QDialog):
 
     def accept(self):
         env = self._env_data[self._env_combo_box.currentText()]
+        Log.i('Loaded environment')
         version = self._api_version_combo_box.currentData()
-        self._docker_manager.connect(version=version, env=env)
+        self._docker_manager.init_env(version=version, env=env)
         super().reject()
 
     def reject(self):

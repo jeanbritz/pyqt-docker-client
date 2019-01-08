@@ -1,7 +1,3 @@
-import sys
-import traceback
-from collections import namedtuple
-
 from PyQt5.Qt import QIcon, Qt, QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
 
@@ -9,13 +5,12 @@ from environment.view import EnvConnectDialog
 from image.view import DockerImageListWidget, DockerImageListWidgetItem, DockerImageDialog
 from debug_console_widget import DebugConsoleWidget
 from db import DatabaseConnection
-from toolbar import DefaultToolbar
+from core.toolbar import DefaultToolbar
 from default_status_bar import DefaultStatusBar
 from i18n import Strings
-from util import Log
 from container import DockerContainerListWidget, ContainerConsoleDockWidget, ContainerDockWidget
 from core import DockerManager
-from signal import GeneralSignals
+from qt_signal import GeneralSignals
 
 
 class MainWindow(QMainWindow):
@@ -51,7 +46,7 @@ class MainWindow(QMainWindow):
         self.init_db()
         self.init_ui()
 
-        self.installEventFilter(self)
+
 
     def on_connect(self):
         self.debug.println('Connected!')
@@ -73,14 +68,14 @@ class MainWindow(QMainWindow):
                                          triggered=QApplication.instance().aboutQt))
         self.help_menu.addAction(QAction("About Application", self, triggered=self.about))
 
+        self.init_toolbar()
+        self.init_status_bar()
+
         self.add_docker_images_view()
         self.add_docker_container_view()
         self.add_container_console_view()
 
         self.add_debug_console(debug=self.debug)
-
-        self.init_toolbar()
-        self.init_status_bar()
 
     def init_db(self):
         self.db = DatabaseConnection()
@@ -88,7 +83,9 @@ class MainWindow(QMainWindow):
 
     def init_toolbar(self):
         self.toolbar = DefaultToolbar(self)
-        self.general_signals.daemon_selected_signal.connect(self.toolbar.on_daemon_selected)
+        signal = self.toolbar.signals().clicked_play_signal
+        func = self.docker_manager.on_toolbar_action
+        signal.connect(func)
         self.addToolBar(self.toolbar)
 
     def init_status_bar(self):
@@ -110,9 +107,10 @@ class MainWindow(QMainWindow):
         self.image_detail_view = DockerImageDialog()
 
     def add_docker_container_view(self):
-        self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS)
+        self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS, signals=self.general_signals)
         self.docker_manager.signals().refresh_containers_signal.connect(self.container_dock_widget.list_widget()
                                                                         .refresh_containers)
+        self.container_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
         self.addDockWidget(Qt.RightDockWidgetArea, self.container_dock_widget)
 
     def add_container_console_view(self):
@@ -125,7 +123,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.BottomDockWidgetArea, dock)
 
     def about(self):
-        QMessageBox.about(Strings.ABOUT, "Testing Qt's Capabilities")
+        QMessageBox.about(self, Strings.ABOUT, "Learning Docker...")
 
     def open_dialog(self):
         self.daemon_connect_dialog = EnvConnectDialog(parent=self, db_connection=self.db,
@@ -134,7 +132,7 @@ class MainWindow(QMainWindow):
 
     def close(self):
         super().close(self)
-        self.docker_manager.disconnect()
+        self.docker_manager.close()
 
     def closeEvent(self, *args, **kwargs):
         """
@@ -143,47 +141,11 @@ class MainWindow(QMainWindow):
         :param kwargs:
         :return:
         """
-        self.docker_manager.disconnect()
+        self.docker_manager.close()
 
-        def eventFilter(self, object: QObject = None, event: QEvent = None):
-            super().eventFilter(object, event)
-            print('Event %s, Object %s' % (event, object))
-            return False
-
-
-
-fake_tb = namedtuple('fake_tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
-
-
-def excepthook(exec_type, exec_value, exec_tb):
-    enriched_tb = _add_missing_frames(exec_tb)
-    # Note: sys.__excepthook__(...) would not work here.
-    # We need to use print_exception(...):
-    traceback.print_exception(exec_type, exec_value, enriched_tb)
-
-
-def _add_missing_frames(tb: fake_tb = None):
-    result = fake_tb(tb.tb_frame, tb.tb_lasti, tb.tb_lineno, tb.tb_next)
-    frame = tb.tb_frame.f_back
-    while frame:
-        result = fake_tb(frame, tb.tb_lasti, tb.tb_lineno, tb.tb_next)
-        frame = tb.tb_frame.f_back
-    return result
-
-
-if __name__ == "__main__":
-    Log.__init__(None)
-    Log.i('Starting GUI')
-    app = QApplication(sys.argv)
-    Log.i('Process ID %s' % app.applicationPid())
-
-    app.setStyle('Fusion')
-    app.focusWidget()
-    window = MainWindow()
-    app.setActiveWindow(window)
-    window.show()
-
-   # sys.excepthook = excepthook
-    sys.exit(app.exec_())
-
-
+    def eventFilter(self, obj: QObject = None, event: QEvent = None):
+        # super().eventFilter(object, event)
+        # if event.type() == QEven:
+        print('Event %s, Object %s' % (event.type(), obj.thread()))
+            # return False
+        return False

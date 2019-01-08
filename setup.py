@@ -100,7 +100,7 @@ setup(
               'venv.Lib.site-packages.pip-10.0.1-py3.7.egg.pip._internal.models',
               'venv.Lib.site-packages.pip-10.0.1-py3.7.egg.pip._internal.commands',
               'venv.Lib.site-packages.pip-10.0.1-py3.7.egg.pip._internal.operations', 'image', 'image.view', 'assets',
-              'config', 'signal', 'toolbar', 'container', 'environment', 'environment.view'],
+              'config', 'qt_signal', 'toolbar', 'container', 'environment', 'environment.view'],
     url='',
     license='',
     author='darkhorse212',
