@@ -20,30 +20,36 @@ class DefaultToolbar(QToolBar):
         self._signals = ToolbarSignals()
         self._selected_model: Model = None
         self._play_action: QAction = None
+        self._stop_action: QAction = None
         self._parent = parent
         self._init_ui()
 
     def _init_ui(self):
         self._play_action = QAction(QIcon("assets/play.svg"), Strings.PLAY_ACTION, self)
         self._play_action.setEnabled(False)
+        self.setToolTip(Strings.PLAY_ACTION)
+        self._stop_action = QAction(QIcon("assets/stop.svg"), Strings.STOP_ACTION, self)
+        self._stop_action.setEnabled(False)
+        self.setToolTip(Strings.STOP_ACTION)
         self.addAction(self._play_action)
+        self.addAction(self._stop_action)
         self.actionTriggered[QAction].connect(self.on_action_clicked)
 
     def on_action_clicked(self, action: QAction):
-        Log.i('Clicked on %s' % action.text())
-        self._signals.clicked_play_signal.emit(action, self._selected_model)
+        # Log.i('Clicked on %s' % action.text())
+        self._signals.clicked_signal.emit(action, self._selected_model)
 
     @pyqtSlot(QDockWidget, Model, name=GeneralSignals.GENERAL_DOCK_WIDGET_SELECTED_SIGNAL)
     def on_dock_widget_focus(self, widget: QDockWidget, model: Model):
         print('Toolbar: Clicked on widget %s and item %s' % (widget, model))
         self._selected_model = model
+        self._play_action.setEnabled(False)
+        self._stop_action.setEnabled(False)
         if isinstance(model, Container):
-            print('Clicked on a container %s' % model)
             if model.status == ContainerStatusEnum.EXITED.value:
                 self._play_action.setEnabled(True)
-
-    def play_action(self):
-        return self._play_action
+            if model.status == ContainerStatusEnum.RUNNING.value:
+                self._stop_action.setEnabled(True)
 
     def signals(self):
         return self._signals

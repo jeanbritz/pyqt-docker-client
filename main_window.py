@@ -2,7 +2,7 @@ from PyQt5.Qt import QIcon, Qt, QEvent, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
 
 from environment.view import EnvConnectDialog
-from image.view import DockerImageListWidget, DockerImageListWidgetItem, DockerImageDialog
+from image.view import DockerImageListWidget, DockerImageListWidgetItem, DockerImageDialog, ImagePullDialog
 from debug_console_widget import DebugConsoleWidget
 from db import DatabaseConnection
 from core.toolbar import DefaultToolbar
@@ -10,6 +10,7 @@ from default_status_bar import DefaultStatusBar
 from i18n import Strings
 from container import DockerContainerListWidget, ContainerConsoleDockWidget, ContainerDockWidget
 from core import DockerManager
+from core.auth import DockerLoginDialog
 from qt_signal import GeneralSignals
 
 
@@ -25,6 +26,7 @@ class MainWindow(QMainWindow):
 
         self.debug: DebugConsoleWidget = None
         self.file_menu: QMenuBar = None
+        self.image_menu: QMenuBar = None
         self.help_menu: QMenuBar = None
 
         self.toolbar: DefaultToolbar = None
@@ -41,7 +43,9 @@ class MainWindow(QMainWindow):
 
         self.general_signals = GeneralSignals()
 
-        self.daemon_connect_dialog: EnvConnectDialog = None
+        self.env_connect_dialog: EnvConnectDialog = None
+        self.image_pull_dialog: ImagePullDialog = None
+        self.login_dialog: DockerLoginDialog = None
 
         self.init_db()
         self.init_ui()
@@ -58,9 +62,12 @@ class MainWindow(QMainWindow):
         self.setGeometry(self.top, self.left, self.width, self.height)
 
         self.file_menu = self.menuBar().addMenu(Strings.FILE_MENU)
-        # self.file_menu.addAction(QAction(Strings.ADD_ACTION, self))
-        self.file_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_dialog))
+        self.file_menu.addAction(QAction(Strings.LOGIN_ACTION, self, triggered=self.open_login_dialog))
+        self.file_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_env_connect_dialog))
         self.file_menu.addAction(QAction(Strings.EXIT_ACTION, self, triggered=self.close))
+
+        self.image_menu = self.menuBar().addMenu(Strings.IMAGE_MENU)
+        self.image_menu.addAction(QAction(Strings.PULL_ACTION, self,triggered=self.open_pull_image_dialog))
 
         self.help_menu = self.menuBar().addMenu("Help")
         self.help_menu.addAction(QAction("About &Qt", self,
@@ -83,9 +90,7 @@ class MainWindow(QMainWindow):
 
     def init_toolbar(self):
         self.toolbar = DefaultToolbar(self)
-        signal = self.toolbar.signals().clicked_play_signal
-        func = self.docker_manager.on_toolbar_action
-        signal.connect(func)
+        self.toolbar.signals().clicked_signal.connect(self.docker_manager.on_toolbar_action)
         self.addToolBar(self.toolbar)
 
     def init_status_bar(self):
@@ -125,10 +130,18 @@ class MainWindow(QMainWindow):
     def about(self):
         QMessageBox.about(self, Strings.ABOUT, "Learning Docker...")
 
-    def open_dialog(self):
-        self.daemon_connect_dialog = EnvConnectDialog(parent=self, db_connection=self.db,
-                                                      docker_manager=self.docker_manager)
-        self.daemon_connect_dialog.open()
+    def open_pull_image_dialog(self):
+        self.image_pull_dialog = ImagePullDialog(parent=self, docker_manager=self.docker_manager)
+        self.image_pull_dialog.open()
+
+    def open_login_dialog(self):
+        self.login_dialog = DockerLoginDialog(parent=self, docker_manager=self.docker_manager)
+        self.login_dialog.open()
+
+    def open_env_connect_dialog(self):
+        self.env_connect_dialog = EnvConnectDialog(parent=self, db_connection=self.db,
+                                                   docker_manager=self.docker_manager)
+        self.env_connect_dialog.open()
 
     def close(self):
         super().close(self)

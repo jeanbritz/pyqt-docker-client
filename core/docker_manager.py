@@ -49,17 +49,36 @@ class DockerManager(QObject):
     def signals(self):
         return self._signals
 
-    def start_container(self, container: Container = None):
-        if container is not None:
-            self._client.api.start(container)
+    def login(self, username=None, password=None, reauth=False, registry=None):
+        try:
+            result = self._client.api.login(username=username, password=password, reauth=reauth, registry=registry)
+            print('Result = %s' % result)
+            return result
+        except APIError as e:
+            return e.explanation
 
-    @pyqtSlot(QAction, Model, name=ToolbarSignals.TOOLBAR_CLICKED_CONNECT_SIGNAL)
+    def pull_image(self, repository='hub.docker.com', tag=None):
+        if tag is not None:
+            try:
+                for line in self._client.api.pull(repository=repository, tag=tag, stream=True):
+                    print(line)
+            except APIError as e:
+                print(e)
+            self._signals.refresh_images_signal.emit(self._client.images.list(all=True))
+
+    @pyqtSlot(QAction, Model, name=ToolbarSignals.TOOLBAR_CLICKED_SIGNAL)
     def on_toolbar_action(self, action: QAction, model: Model):
         try:
             print('Action: %s, Model: %s' % (action, model))
             if isinstance(model, Container):
                 if action.text() == Strings.PLAY_ACTION and model.status == 'exited':
                     value = self._client.api.start(model.id)
-                    print(value)
+                    model.reload()
+
+                if action.text() == Strings.STOP_ACTION and model.status == 'running':
+                    value = self._client.api.stop(model.id, timeout=120)
+                    model.reload()
+
+                self._signals.refresh_containers_signal.emit(self._client.containers.list(all=True))
         except APIError as e:
             print(e)
