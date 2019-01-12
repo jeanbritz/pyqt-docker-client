@@ -1,6 +1,13 @@
 import logging
 import logging.config
 import yaml
+import time
+import datetime
+
+from io import StringIO
+
+from PyQt5.QtWidgets import QTextEdit
+from PyQt5.QtGui import QFont, QTextCursor
 
 
 class Log:
@@ -42,3 +49,25 @@ class Log:
         :return:
         """
         logger.warning(msg)
+
+
+class DebugConsole(QTextEdit):
+
+    def __init__(self, parent=None):
+        super(DebugConsole, self).__init__(parent)
+        global buffer
+        global this
+        this = self
+        buffer = StringIO()
+        self.setReadOnly(True)
+        self.font = QFont('Courier New', 8, QFont.Normal)
+        self.setFont(self.font)
+
+    @staticmethod
+    def println(msg):
+        ts = time.time()
+        timestamp = datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S')
+        this.insertPlainText('[%s] %s \n' % (timestamp, msg))
+        # Autoscroll
+        this.moveCursor(QTextCursor.End)
+        buffer.write(msg)

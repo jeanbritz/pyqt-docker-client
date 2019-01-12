@@ -1,17 +1,19 @@
-from PyQt5.Qt import QIcon, Qt, QEvent, QObject
+from PyQt5.Qt import QIcon, Qt, QEvent, QObject, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
 
 from environment.view import EnvConnectDialog
-from image.view import DockerImageListWidget, DockerImageListWidgetItem, DockerImageDialog, ImagePullDialog
-from debug_console_widget import DebugConsoleWidget
+from image import ImageDockWidget
+from image.view import DockerImageDialog, ImagePullDialog
+from network.view import NetworkDockWidget
 from db import DatabaseConnection
 from core.toolbar import DefaultToolbar
 from default_status_bar import DefaultStatusBar
 from i18n import Strings
-from container import DockerContainerListWidget, ContainerConsoleDockWidget, ContainerDockWidget
-from core import DockerManager
+from container import ContainerConsoleDockWidget, ContainerDockWidget
+from core.docker_manager import DockerManager
 from core.auth import DockerLoginDialog
 from qt_signal import GeneralSignals
+from util import DebugConsole, LoadingDialog
 
 
 class MainWindow(QMainWindow):
@@ -24,7 +26,9 @@ class MainWindow(QMainWindow):
         self.width: int = 600
         self.height: int = 500
 
-        self.debug: DebugConsoleWidget = None
+        self._debug_console: DebugConsole = None
+        self._loading_dialog: LoadingDialog = None
+
         self.file_menu: QMenuBar = None
         self.image_menu: QMenuBar = None
         self.help_menu: QMenuBar = None
@@ -32,16 +36,19 @@ class MainWindow(QMainWindow):
         self.toolbar: DefaultToolbar = None
         self.status_bar: DefaultStatusBar = None
 
-        self.image_list_widget: DockerImageListWidget = None
+        self.image_dock_widget: ImageDockWidget = None
         self.image_detail_view: DockerImageDialog = None
 
-        self.container_dock_widget: DockerContainerListWidget = None
+        self.container_dock_widget: ContainerDockWidget = None
         self.container_console_widget: ContainerConsoleDockWidget = None
+
+        self.network_dock_widget: NetworkDockWidget = None
 
         self.docker_manager: DockerManager = DockerManager()
         self.db: DatabaseConnection = None
 
         self.general_signals = GeneralSignals()
+        self.docker_manager: DockerManager = DockerManager(general_signals=self.general_signals)
 
         self.env_connect_dialog: EnvConnectDialog = None
         self.image_pull_dialog: ImagePullDialog = None
@@ -50,13 +57,12 @@ class MainWindow(QMainWindow):
         self.init_db()
         self.init_ui()
 
-
-
-    def on_connect(self):
-        self.debug.println('Connected!')
-
     def init_ui(self):
-        self.debug = DebugConsoleWidget()
+        self._debug_console = DebugConsole()
+
+        self._loading_dialog = LoadingDialog(self)
+        self.general_signals.show_loading_signal.connect(self.show_loading_dialog)
+
         self.setWindowTitle(Strings.APP_NAME)
         self.setWindowIcon(QIcon('assets/docker.svg'))
         self.setGeometry(self.top, self.left, self.width, self.height)
@@ -79,10 +85,14 @@ class MainWindow(QMainWindow):
         self.init_status_bar()
 
         self.add_docker_images_view()
-        self.add_docker_container_view()
         self.add_container_console_view()
+        self.add_docker_container_view()
 
-        self.add_debug_console(debug=self.debug)
+        self.add_docker_network_view()
+
+        self.add_debug_console(debug=self._debug_console)
+
+        self.container_dock_widget.list_widget().clicked.connect(self.on_container_clicked)
 
     def init_db(self):
         self.db = DatabaseConnection()
@@ -91,32 +101,39 @@ class MainWindow(QMainWindow):
     def init_toolbar(self):
         self.toolbar = DefaultToolbar(self)
         self.toolbar.signals().clicked_signal.connect(self.docker_manager.on_toolbar_action)
+        self.toolbar.signals().refresh_signal.connect(self.docker_manager.on_refresh_action)
+        self.docker_manager.signals().status_change_signal.connect(self.toolbar.on_docker_manager_status_change)
         self.addToolBar(self.toolbar)
 
     def init_status_bar(self):
         self.status_bar = DefaultStatusBar(self)
-        self.docker_manager.signals().connect_signal.connect(self.status_bar.on_stats_update)
+        self.docker_manager.signals().status_change_signal.connect(self.status_bar.on_stats_update)
         self.setStatusBar(self.status_bar)
 
-    def on_image_clicked(self, item:DockerImageListWidgetItem = None):
+    def on_image_clicked(self, item = None):
         self.image_detail_view.set_data(item.data(Qt.UserRole).attrs)
         self.image_detail_view.show()
 
     def add_docker_images_view(self):
-        self.image_list_widget = DockerImageListWidget()
-        self.image_list_widget.itemClicked.connect(self.on_image_clicked)
-        self.docker_manager.signals().refresh_images_signal.connect(self.image_list_widget.refresh_images)
-        dock = QDockWidget(Strings.IMAGES, self)
-        dock.setWidget(self.image_list_widget)
-        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        self.image_dock_widget = ImageDockWidget(Strings.IMAGES, signals=self.general_signals)
+        self.docker_manager.signals().refresh_images_signal.connect(self.image_dock_widget.list_widget().refresh_images)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.image_dock_widget)
+
         self.image_detail_view = DockerImageDialog()
 
     def add_docker_container_view(self):
-        self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS, signals=self.general_signals)
+        self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS, signals=self.general_signals, dialog=self.container_console_widget)
         self.docker_manager.signals().refresh_containers_signal.connect(self.container_dock_widget.list_widget()
                                                                         .refresh_containers)
         self.container_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
         self.addDockWidget(Qt.RightDockWidgetArea, self.container_dock_widget)
+
+    def add_docker_network_view(self):
+        self.network_dock_widget = NetworkDockWidget(Strings.NETWORKS, signals=self.general_signals)
+        self.docker_manager.signals().refresh_networks_signal.connect(self.network_dock_widget.list_widget()
+                                                                      .refresh_networks)
+        self.network_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.network_dock_widget)
 
     def add_container_console_view(self):
         self.container_console_widget = ContainerConsoleDockWidget("Work Area")
@@ -127,11 +144,20 @@ class MainWindow(QMainWindow):
         dock.setWidget(debug)
         self.addDockWidget(Qt.BottomDockWidgetArea, dock)
 
+    @pyqtSlot(bool, str, name=GeneralSignals.GENERAL_SHOW_LOADING_SIGNAL)
+    def show_loading_dialog(self, show: bool = False, text: str = None):
+        if show:
+            self._loading_dialog.set_text(text)
+            self._loading_dialog.open()
+        else:
+            self._loading_dialog.set_text(None)
+            self._loading_dialog.close()
+
     def about(self):
         QMessageBox.about(self, Strings.ABOUT, "Learning Docker...")
 
     def open_pull_image_dialog(self):
-        self.image_pull_dialog = ImagePullDialog(parent=self, docker_manager=self.docker_manager)
+        self.image_pull_dialog = ImagePullDialog(parent=self, docker_manager=self.docker_manager, db_connection=self.db)
         self.image_pull_dialog.open()
 
     def open_login_dialog(self):
@@ -156,9 +182,5 @@ class MainWindow(QMainWindow):
         """
         self.docker_manager.close()
 
-    def eventFilter(self, obj: QObject = None, event: QEvent = None):
-        # super().eventFilter(object, event)
-        # if event.type() == QEven:
-        print('Event %s, Object %s' % (event.type(), obj.thread()))
-            # return False
-        return False
+    def on_container_clicked(self, container):
+        pass

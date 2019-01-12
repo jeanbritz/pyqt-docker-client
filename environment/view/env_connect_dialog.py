@@ -46,7 +46,6 @@ class EnvConnectDialog(QDialog):
     def _set_data(self):
         self._env_data = self._db_connection.get_environments()
         self._api_version_data = self._db_connection.get_api_versions()
-        self._env_combo_box.addItem("Auto Detect", os.environ)
         for key in self._env_data:
             self._env_combo_box.addItem(key, self._env_data[key])
         for key in self._api_version_data:

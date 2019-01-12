@@ -1,14 +1,12 @@
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QToolBar, QAction, QVBoxLayout, QDockWidget, QListWidgetItem
+from PyQt5.QtWidgets import QToolBar, QAction, QVBoxLayout, QDockWidget
 from PyQt5.QtGui import QIcon
 
-from docker.models.resource import Model
-from docker.models.containers import Container
-
-from core import ContainerStatusEnum
-from util import Log
+from core import ContainerClientModel, ClientModel
+from core.docker_manager import DockerManager
+from core.docker_enum import ContainerStatus
 from i18n import Strings
-from qt_signal import GeneralSignals, ToolbarSignals
+from qt_signal import GeneralSignals, ToolbarSignals, DockerSignals
 
 
 class DefaultToolbar(QToolBar):
@@ -18,38 +16,57 @@ class DefaultToolbar(QToolBar):
         layout = QVBoxLayout()
         self.setLayout(layout)
         self._signals = ToolbarSignals()
-        self._selected_model: Model = None
+        self._selected_model: ClientModel = None
+        self._refresh_action: QAction = None
         self._play_action: QAction = None
         self._stop_action: QAction = None
         self._parent = parent
         self._init_ui()
 
     def _init_ui(self):
+        self._refresh_action = QAction(QIcon("assets/refresh.svg"), Strings.REFRESH_ACTION, self)
+        self._refresh_action.setEnabled(False)
+        self.setToolTip(Strings.REFRESH_ACTION)
         self._play_action = QAction(QIcon("assets/play.svg"), Strings.PLAY_ACTION, self)
         self._play_action.setEnabled(False)
         self.setToolTip(Strings.PLAY_ACTION)
         self._stop_action = QAction(QIcon("assets/stop.svg"), Strings.STOP_ACTION, self)
         self._stop_action.setEnabled(False)
         self.setToolTip(Strings.STOP_ACTION)
+
+        self.addAction(self._refresh_action)
         self.addAction(self._play_action)
         self.addAction(self._stop_action)
         self.actionTriggered[QAction].connect(self.on_action_clicked)
 
     def on_action_clicked(self, action: QAction):
-        # Log.i('Clicked on %s' % action.text())
-        self._signals.clicked_signal.emit(action, self._selected_model)
+        if action.text() != Strings.REFRESH_ACTION:
+            self._signals.clicked_signal.emit(action, self._selected_model)
+        else:
+            self._signals.refresh_signal.emit()
 
-    @pyqtSlot(QDockWidget, Model, name=GeneralSignals.GENERAL_DOCK_WIDGET_SELECTED_SIGNAL)
-    def on_dock_widget_focus(self, widget: QDockWidget, model: Model):
-        print('Toolbar: Clicked on widget %s and item %s' % (widget, model))
+    @pyqtSlot(QDockWidget, ClientModel, name=GeneralSignals.GENERAL_DOCK_WIDGET_SELECTED_SIGNAL)
+    def on_dock_widget_focus(self, widget: QDockWidget, model: ClientModel):
         self._selected_model = model
         self._play_action.setEnabled(False)
         self._stop_action.setEnabled(False)
-        if isinstance(model, Container):
-            if model.status == ContainerStatusEnum.EXITED.value:
+        if isinstance(model, ContainerClientModel):
+            if model.state == ContainerStatus.EXITED.value:
                 self._play_action.setEnabled(True)
-            if model.status == ContainerStatusEnum.RUNNING.value:
+            if model.state == ContainerStatus.RUNNING.value:
                 self._stop_action.setEnabled(True)
+
+    @pyqtSlot(int, name=DockerSignals.DOCKER_STATUS_CHANGE_SIGNAL)
+    def on_docker_manager_status_change(self, status):
+        if status == DockerManager.CONNECTED:
+            self._refresh_action.setEnabled(True)
+        if status == DockerManager.DISCONNECTED:
+            self.reset()
 
     def signals(self):
         return self._signals
+
+    def reset(self):
+        self._refresh_action.setEnabled(False)
+        self._play_action.setEnabled(False)
+        self._stop_action.setEnabled(False)

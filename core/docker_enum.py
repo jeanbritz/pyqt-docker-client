@@ -1,7 +1,7 @@
 import enum
 
 
-class ContainerStatusEnum(enum.Enum):
+class ContainerStatus(enum.Enum):
 
     CREATED = 'created'
     RESTARTING = 'restarting'
@@ -9,3 +9,9 @@ class ContainerStatusEnum(enum.Enum):
     PAUSED = 'paused'
     EXITED = 'exited'
     DEAD = 'dead'
+
+
+class Operation(enum.Enum):
+
+    STOP_CONTAINER = 'op_stop_container'
+

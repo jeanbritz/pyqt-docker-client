@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtSql import QSqlDatabase, QSqlQuery
+from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlDriver
 from util.log import Log
 
 
@@ -11,6 +11,8 @@ class DatabaseConnection:
     def _create_connection(self):
         self.db = QSqlDatabase.addDatabase("QSQLITE")
         self.db.setDatabaseName('docker.db')
+        self._driver = self.db.driver()
+
         Log.i("Database Driver: %s" % self.db.driverName())
         if not self.db.open():
             QMessageBox.critical(None, "Cannot open database",
@@ -33,21 +35,31 @@ class DatabaseConnection:
         query.exec_("create table docker_e_env("
                     "e_id int primary key, "
                     "e_name varchar(32))")
-        query.exec_("insert into docker_e_env values (0, 'Docker VM')")
+        query.exec_("insert into docker_e_env values (0, 'Local VM')")
+        query.exec_("insert into docker_e_env values (1, 'Linux')")
 
         query.exec_("create table docker_ev_env_setting("
                     "ev_name varchar(256),"
                     "ev_value varchar(1024),"
                     "e_id int,"
                     "primary key (e_id, ev_name))")
-        query.exec_("insert into docker_ev_env_setting values ('DOCKER_HOST', 'tcp://localhost:2376', 0)")
+        query.exec_("insert into docker_ev_env_setting values ('DOCKER_HOST', 'tcp://10.0.0.17:2376', 0)")
         query.exec_("insert into docker_ev_env_setting values ('DOCKER_TLS_VERIFY', '', 0)")
         query.exec_("insert into docker_ev_env_setting values ('DOCKER_CERT_PATH', '', 0)")
+        query.exec_("insert into docker_ev_env_setting values ('DOCKER_HOST', 'unix:///var/run/docker.sock', 1)")
+        query.exec_("insert into docker_ev_env_setting values ('DOCKER_TLS_VERIFY', '', 1)")
+        query.exec_("insert into docker_ev_env_setting values ('DOCKER_CERT_PATH', '', 1)")
 
         query.exec_("create table docker_av_api_version("
                     "av_name varchar(8),"
                     "av_value varchar(8))")
         query.exec_("insert into docker_av_api_version values ('Auto', 'auto')")
+
+        query.exec_("create table docker_reg_registry("
+                    "reg_id int primary key, "
+                    "reg_name varchar(32),"
+                    "reg_hostname varchar(128))")
+        query.exec_("insert into docker_reg_registry values (0, 'Local VM', 'localhost:5000')")
 
         return self.db.commit()
 
@@ -87,4 +99,14 @@ class DatabaseConnection:
         while query.next():
             result.append({'name': query.value(rec.indexOf('av_name')),
                            'value': query.value(rec.indexOf('av_value'))})
+        return result
+
+    def get_registries(self):
+        result = []
+        query = QSqlQuery(self.db)
+        query.exec("select * from docker_reg_registry")
+        rec = query.record()
+        while query.next():
+            result.append({'name': query.value((rec.indexOf('reg_name'))),
+                           'hostname': query.value(rec.indexOf('reg_hostname'))})
         return result

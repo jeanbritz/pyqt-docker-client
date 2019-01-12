@@ -14,6 +14,7 @@ class Strings:
     HELP_ACTION = "&Help"
 
     # Toolbar Actions
+    REFRESH_ACTION = "Refresh"
     PLAY_ACTION = "Play"
     STOP_ACTION = "Stop"
 
@@ -21,6 +22,7 @@ class Strings:
     DAEMONS = "Daemons"
     IMAGES = "Images"
     CONTAINERS = "Containers"
+    NETWORKS = "Networks"
 
     # Error Messages
     ERROR = "Error"
