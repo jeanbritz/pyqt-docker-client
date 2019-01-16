@@ -5,6 +5,7 @@ import traceback
 from PyQt5.Qt import QApplication, QSizePolicy
 from PyQt5.QtWidgets import QMessageBox, QSpacerItem
 
+from db import Upgrade
 from i18n import Strings
 from util import Log
 from main_window import MainWindow
@@ -48,6 +49,10 @@ def handle_exception(exec_type, exec_value, exec_traceback):
 
 if __name__ == "__main__":
     Log.__init__(None)
+    Log.i("Performing DB Init")
+    upgrade = Upgrade()
+    upgrade.upgrade()
+
     Log.i('Starting GUI')
     app = QApplication(sys.argv)
     Log.i('Process ID %s' % app.applicationPid())
