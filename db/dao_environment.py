@@ -1,11 +1,12 @@
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
-from util import Log
+from db.db_constant import DbConstant
+
 
 class DaoEnvironment:
 
     TABLE_NAME = 'd_env_environment'
-    LINK_TABLE_NAME = "d_ev_env_setting"
+    LINK_TABLE_NAME = "d_es_env_setting"
 
     def __init__(self, conn: QSqlDatabase = None) -> None:
         super().__init__()
@@ -19,14 +20,9 @@ class DaoEnvironment:
         """
         if self.TABLE_NAME not in self._conn.tables():
             query = QSqlQuery(self._conn)
-            query.exec_("create table " + self.TABLE_NAME + " ("
-                        "env_id int primary key autoincrement, "
-                        "env_name varchar(32))")
-            query.exec_("create table " + self.LINK_TABLE_NAME + "("
-                        "ev_name varchar(256),"
-                        "ev_value varchar(1024),"
-                        "env_id int,"
-                        "primary key (e_id, ev_name))")
+            query.exec_(DbConstant.CREATE_TABLE_ENVIRONMENT % self.TABLE_NAME)
+            query.exec_(DbConstant.CREATE_TABLE_ENVIRONMENT_SETTING % self.LINK_TABLE_NAME)
+            query.finish()
 
     def list(self) -> dict:
         """
@@ -35,7 +31,7 @@ class DaoEnvironment:
         """
         result = {}
         query = QSqlQuery(self._conn)
-        query.exec("select * from " + self.TABLE_NAME)
+        query.exec(DbConstant.SELECT_STAR % self.TABLE_NAME)
         rec = query.record()
         while query.next():
             env_id = query.value(rec.indexOf("env_id"))
@@ -51,10 +47,13 @@ class DaoEnvironment:
         :return: Last insert's id columns value (primary key value)
         """
         query = QSqlQuery(self._conn)
-        query.prepare("insert into " + self.TABLE_NAME + "(env_name) values (:name)")
+        query.prepare(DbConstant.INSERT_ENVIRONMENT % self.TABLE_NAME)
         query.bindValue(":name", name)
-        query.exec()
-        return query.lastInsertId()
+        query.exec_()
+        # Grab the last id before finish() is called, otherwise it is lost
+        last_id = query.lastInsertId()
+        query.finish()
+        return last_id
 
     def insert_env_setting(self, env_id: int = None, setting: tuple = None):
         """
@@ -63,7 +62,13 @@ class DaoEnvironment:
         :param setting: - Tuple that is a name-value pair (e.g. ('DOCHER_HOST', 'tcp://localhost:2376'))
         :return: None
         """
-        pass
+        query = QSqlQuery(self._conn)
+        query.prepare(DbConstant.INSERT_ENVIRONMENT_SETTING % self.LINK_TABLE_NAME)
+        query.bindValue(":name", setting[0])
+        query.bindValue(":value", setting[1])
+        query.bindValue(":env_id", env_id)
+        query.exec_()
+        query.finish()
 
     def drop(self) -> None:
         """
@@ -71,8 +76,8 @@ class DaoEnvironment:
         :return: None
         """
         query = QSqlQuery(self._conn)
-        query.exec_("drop table " + self.LINK_TABLE_NAME)
-        query.exec_("drop table " + self.TABLE_NAME)
+        query.exec_(DbConstant.DROP_TABLE % self.LINK_TABLE_NAME)
+        query.exec_(DbConstant.DROP_TABLE % self.TABLE_NAME)
 
     def _list_env_values(self, env_id: int = None) -> dict:
         """
@@ -82,12 +87,12 @@ class DaoEnvironment:
         """
         result = {}
         query = QSqlQuery(self._conn)
-        query.prepare("select * from " + self.LINK_TABLE_NAME + " where env_id = :env_id")
+        query.prepare(DbConstant.SELECT_SETTINGS_BY_ENV % self.LINK_TABLE_NAME)
         query.bindValue(':env_id', env_id)
         query.exec_()
         rec = query.record()
         while query.next():
-            name = query.value(rec.indexOf("ev_name"))
-            value = query.value(rec.indexOf("ev_value"))
+            name = query.value(rec.indexOf("es_name"))
+            value = query.value(rec.indexOf("es_value"))
             result[name] = value
         return result

@@ -23,23 +23,20 @@ class Upgrade:
         :return:
         """
         try:
-            Log.i("DROP Environment")
+            Log.i("Upgrade Started")
             self._dao_environment.drop()
 
-            Log.i("INIT Environment")
             self._dao_environment.init()
+            self.handle_sql_error(self._conn.lastError())
 
             # Insert Local VM environment
-            Log.i("INSERT Environment")
             env_id = self._dao_environment.insert_env('Local VM')
-
             if env_id is not None:
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_HOST', 'tcp://10.0.0.7:2376'))
+                self._dao_environment.insert_env_setting(env_id, ('DOCKER_HOST', 'tcp://10.0.0.17:2376'))
                 self._dao_environment.insert_env_setting(env_id, ('DOCKER_TLS_VERIFY', ''))
                 self._dao_environment.insert_env_setting(env_id, ('DOCKER_CERT_PATH', ''))
 
             # Insert Linux environment
-            Log.i("INSERT Environment")
             env_id = self._dao_environment.insert_env('Linux')
 
             if env_id is not None:
@@ -47,25 +44,21 @@ class Upgrade:
                 self._dao_environment.insert_env_setting(env_id, ('DOCKER_TLS_VERIFY', ''))
                 self._dao_environment.insert_env_setting(env_id, ('DOCKER_CERT_PATH', ''))
 
-            Log.i("DROP Registry")
             self._dao_registry.drop()
-            Log.i("INIT Registry")
             self._dao_registry.init()
 
             # Insert Local Docker Registry entry
-            Log.i("INSERT Registry")
             registry_id = self._dao_registry.insert_registry('Local VM', 'localhost:5000')
 
             # Commit all changes to database
-            self._conn.commit()
+
             self.handle_sql_error(self._conn.lastError())
         except QSqlError as e:
             self.handle_sql_error(e)
         # Close database connection
         self._conn.close()
 
-
-    def handle_sql_error(self, error:QSqlError = None):
+    def handle_sql_error(self, error: QSqlError = None):
         """
         Types:
         ConnectionError = 1

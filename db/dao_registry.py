@@ -1,5 +1,7 @@
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 
+from db.db_constant import DbConstant
+
 
 class DaoRegistry:
     TABLE_NAME = 'd_reg_registry'
@@ -16,10 +18,7 @@ class DaoRegistry:
         """
         if self.TABLE_NAME not in self._conn.tables():
             query = QSqlQuery(self._conn)
-            query.exec_("create table " + self.TABLE_NAME + "("
-                        "reg_id int primary key, "
-                        "reg_name varchar(32),"
-                        "reg_hostname varchar(128))")
+            query.exec_(DbConstant.CREATE_TABLE_REGISTRY % self.TABLE_NAME)
 
     def insert_registry(self, name, hostname) -> int:
         """
@@ -31,11 +30,14 @@ class DaoRegistry:
         insert into docker_reg_registry values (0, 'Local VM', 'localhost:5000')
         """
         query = QSqlQuery(self._conn)
-        query.prepare("insert into " + self.TABLE_NAME + " (reg_name, reg_hostname) values (:name, :hostname)")
+        query.prepare(DbConstant.INSERT_REGISTRY % self.TABLE_NAME)
         query.bindValue(":name", name)
         query.bindValue(":hostname", hostname)
-        query.exec()
-        return query.lastInsertId()
+        query.exec_()
+        # Grab the last id before finish() is called, otherwise it is lost
+        last_id = query.lastInsertId()
+        query.finish()
+        return last_id
 
     def list(self) -> dict:
         """
@@ -44,7 +46,7 @@ class DaoRegistry:
         """
         result = {}
         query = QSqlQuery(self._conn)
-        query.exec("select * from " + self.TABLE_NAME)
+        query.exec(DbConstant.SELECT_STAR % self.TABLE_NAME)
         rec = query.record()
         while query.next():
             # reg_id = query.value(rec.indexOf("reg_id"))
@@ -59,4 +61,4 @@ class DaoRegistry:
         :return: None
         """
         query = QSqlQuery(self._conn)
-        query.exec_("drop table " + self.TABLE_NAME)
+        query.exec_(DbConstant.DROP_TABLE % self.TABLE_NAME)

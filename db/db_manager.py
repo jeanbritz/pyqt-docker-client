@@ -1,11 +1,13 @@
 from PyQt5.QtWidgets import QMessageBox
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlDriver
+
+from db.db_constant import DbConstant
 from util.log import Log
 
 
 class DbManager:
 
-    DB_TYPE = 'QSQLITE'
+
 
     def __init__(self):
         self._conn: QSqlDatabase = None
@@ -16,8 +18,8 @@ class DbManager:
 
         :return:
         """
-        self._conn = QSqlDatabase.addDatabase(self.DB_TYPE)
-        self._conn.setDatabaseName('docker.db')
+        self._conn = QSqlDatabase.addDatabase(DbConstant.DB_TYPE)
+        self._conn.setDatabaseName(DbConstant.DB_NAME)
 
         self._driver = self._conn.driver()
         Log.i("Database Driver: %s" % self._conn.driverName())
