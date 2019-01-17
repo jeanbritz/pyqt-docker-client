@@ -5,7 +5,7 @@ from environment.view import EnvConnectDialog
 from image import ImageDockWidget
 from image.view import DockerImageDialog, ImagePullDialog
 from network.view import NetworkDockWidget
-from db import DatabaseConnection
+from db import DbManager, DaoRegistry,DaoEnvironment
 from core.toolbar import DefaultToolbar
 from default_status_bar import DefaultStatusBar
 from i18n import Strings
@@ -45,7 +45,10 @@ class MainWindow(QMainWindow):
         self.network_dock_widget: NetworkDockWidget = None
 
         self.docker_manager: DockerManager = DockerManager()
-        self.db: DatabaseConnection = None
+
+        self.db: DbManager = None
+        self.dao_env: DaoEnvironment = None
+        self.dao_registry: DaoRegistry = None
 
         self.general_signals = GeneralSignals()
         self.docker_manager: DockerManager = DockerManager(general_signals=self.general_signals)
@@ -95,8 +98,9 @@ class MainWindow(QMainWindow):
         self.container_dock_widget.list_widget().clicked.connect(self.on_container_clicked)
 
     def init_db(self):
-        self.db = DatabaseConnection()
-        self.db.create_tables(drop_first=True)
+        self.db = DbManager()
+        self.dao_env = DaoEnvironment(conn=self.db.get_connection())
+        self.dao_registry = DaoRegistry(conn=self.db.get_connection())
 
     def init_toolbar(self):
         self.toolbar = DefaultToolbar(self)
@@ -165,7 +169,7 @@ class MainWindow(QMainWindow):
         self.login_dialog.open()
 
     def open_env_connect_dialog(self):
-        self.env_connect_dialog = EnvConnectDialog(parent=self, db_connection=self.db,
+        self.env_connect_dialog = EnvConnectDialog(parent=self, dao=self.dao_env,
                                                    docker_manager=self.docker_manager)
         self.env_connect_dialog.open()
 

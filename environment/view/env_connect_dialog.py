@@ -9,7 +9,7 @@ from util import Log
 
 class EnvConnectDialog(QDialog):
 
-    def __init__(self, parent=None, db_connection=None, docker_manager=None):
+    def __init__(self, parent=None, dao=None, docker_manager=None):
         # super().__init__(parent=None, flags=(Qt.Window | Qt.WindowStaysOnTopHint))
         super(EnvConnectDialog, self).__init__(parent)
         self.setWindowIcon(parent.windowIcon())
@@ -20,16 +20,14 @@ class EnvConnectDialog(QDialog):
 
         self._env_combo_box: QComboBox = None
         self._env_host_text_box: QLabel = None
-        self._api_version_combo_box: QComboBox = None
 
         self._use_tls_check_box: QCheckBox = None
         self._verify_host_check_box: QCheckBox = None
         self._cert_path_text_box: QLineEdit = None
 
         self._env_data = None
-        self._api_version_data = None
 
-        self._db_connection = db_connection
+        self._dao = dao
         self._init_ui()
         self._set_data()
 
@@ -44,12 +42,9 @@ class EnvConnectDialog(QDialog):
         self.setLayout(self.main_layout)
 
     def _set_data(self):
-        self._env_data = self._db_connection.get_environments()
-        self._api_version_data = self._db_connection.get_api_versions()
+        self._env_data = self._dao.list()
         for key in self._env_data:
             self._env_combo_box.addItem(key, self._env_data[key])
-        for key in self._api_version_data:
-            self._api_version_combo_box.addItem(key['name'], key['value'])
 
     def _create_connection_group_box(self):
         environment_group_box = QGroupBox("Environment")
@@ -60,8 +55,6 @@ class EnvConnectDialog(QDialog):
         layout.addRow(QLabel("Name"), self._env_combo_box)
         self._env_host_text_box = QLabel()
         layout.addRow(QLabel("Host"), self._env_host_text_box)
-        self._api_version_combo_box = QComboBox()
-        layout.addRow(QLabel("API Version"), self._api_version_combo_box)
         environment_group_box.setLayout(layout)
         return environment_group_box
 
@@ -96,8 +89,7 @@ class EnvConnectDialog(QDialog):
     def accept(self):
         env = self._env_data[self._env_combo_box.currentText()]
         Log.i('Loaded environment')
-        version = self._api_version_combo_box.currentData()
-        self._docker_manager.init_env(version=version, env=env)
+        self._docker_manager.init_env(env=env)
         super().reject()
 
     def reject(self):
