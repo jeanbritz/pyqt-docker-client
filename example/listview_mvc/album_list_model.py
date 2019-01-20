@@ -1,57 +1,8 @@
-import sys
 
-from PyQt5.Qt import QApplication, Qt, QModelIndex, QAbstractListModel, QVariant
-from PyQt5.QtWidgets import QMainWindow, QListView
+from PyQt5.Qt import Qt, QModelIndex, QAbstractListModel, QVariant
 
-from example.listview_mvc import DbManager
 from example.listview_mvc import Album
-from example.listview_mvc import AlbumDao
 
-
-class MainWindow(QMainWindow):
-
-    def __init__(self):
-        super(MainWindow, self).__init__()
-
-        self.top: int = 400
-        self.left: int = 400
-        self.width: int = 600
-        self.height: int = 500
-
-        self.setWindowTitle("Albums - List View Example")
-        self.setGeometry(self.top, self.left, self.width, self.height)
-
-        self.dbm: DbManager = None
-        self.dao: AlbumDao = None
-
-        self.list_view: QListView = None
-        self.list_model: QAbstractListModel = None
-
-        self.init_db()
-        self.init_ui()
-
-    def init_db(self):
-        """
-        Initialises DB connection
-        :return:
-        """
-        self.dbm = DbManager()
-        self.dbm.create()
-        self.dao = AlbumDao(dbm=self.dbm)
-        if not self.dao.init():
-            print("Failed to initialise DAO for Albums")
-        else:
-            print("DAO initialised for Albums")
-
-    def init_ui(self):
-        """
-        Initialises UI components
-        :return:
-        """
-        self.list_view = QListView()
-        self.list_model = AlbumListModel(dao=self.dao)
-        self.list_view.setModel(self.list_model)
-        self.setCentralWidget(self.list_view)
 #
 # PyQt (Qt) list of model types:
 # ==============================
@@ -64,6 +15,7 @@ class MainWindow(QMainWindow):
 # It is an object used to locate data within a model. This class is also used to locate data in different model types
 #
 #
+
 
 class AlbumListModel(QAbstractListModel):
 
@@ -83,10 +35,10 @@ class AlbumListModel(QAbstractListModel):
     def add_album(self, album: Album) -> QModelIndex:
         row_index = self.rowCount()
         self.beginInsertRows(QModelIndex(), row_index, row_index)  # Informs that rows are about to change for the
-                                                                 # given index
-        self._dao.add_album(album)
+                                                                   # given index
+        self._dao.create_album(album)
         self._data.append(album)
-        self.endInsertRows()                                     # Informs that the rows have been changed
+        self.endInsertRows()                                       # Informs that the rows have been changed
         return self.index(row_index, 0)
 
     def rowCount(self, parent: QModelIndex = None, *args, **kwargs) -> int:
@@ -108,7 +60,7 @@ class AlbumListModel(QAbstractListModel):
         :param role:
         :return:
         """
-        if self._is_index_valid(index):
+        if not self._is_index_valid(index):
             return QVariant()
 
         album = self._data[index.row()]  # Data is 1-dimensional array
@@ -134,7 +86,7 @@ class AlbumListModel(QAbstractListModel):
             return False
 
         album = self._data[index.row()]
-        album._name = value.value()
+        album._name = value
 
         if self._dao.update_album(album) is True:
             self.dataChanged.emit(index, index)
@@ -157,12 +109,10 @@ class AlbumListModel(QAbstractListModel):
             return False
 
         self.beginRemoveRows(parent, row, row + count - 1)
-        count_left = count
-        while count_left > 0:
-            album = self._data[row + count_left]
-            self._dao.delete_album(album)
-            count_left = count_left - 1
 
+        album = self._data[row]
+        if self._dao.delete_album(album):
+            self._data.pop(row)
         self.endRemoveRows()
         return True
 
@@ -183,13 +133,3 @@ class AlbumListModel(QAbstractListModel):
         if index.row() < 0 or index.row() >= self.rowCount() or not index.isValid():
             return False
         return True
-
-
-if __name__ == '__main__':
-
-    app = QApplication(sys.argv)
-    app.setStyle('Fusion')
-    window = MainWindow()
-    app.setActiveWindow(window)
-    window.show()
-    sys.exit(app.exec_())
