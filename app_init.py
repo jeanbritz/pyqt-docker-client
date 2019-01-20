@@ -47,7 +47,8 @@ def handle_exception(exec_type, exec_value, exec_traceback):
     msg.exec_()
 
 
-if __name__ == "__main__":
+def main():
+    global app
     Log.__init__(None)
     Log.i("Performing DB Init")
     upgrade = Upgrade()
@@ -65,3 +66,7 @@ if __name__ == "__main__":
 
     sys.excepthook = handle_exception
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,13 +1,18 @@
 from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlDriver
+from PyQt5.QtSql import QSqlDatabase, QSqlQuery, QSqlDriver, QSqlError
 
 from db.db_constant import DbConstant
 from util.log import Log
 
+"""
+The QSqlQuery::exec() function returns a bool value that indicates if
+the request has been successful. In your production code, always check
+this value. You can further investigate the error
+with QSqlQuery::lastError(). 
+"""
+
 
 class DbManager:
-
-
 
     def __init__(self):
         self._conn: QSqlDatabase = None
@@ -32,6 +37,7 @@ class DbManager:
                                  "Click Cancel to exit.",
                                  QMessageBox.Cancel)
             return None
+        Log.i("DB Connection established")
         return self._conn
 
     def get_connection(self):
@@ -54,3 +60,9 @@ class DbManager:
     def close(self):
         if self._conn is not None:
             self._conn.close()
+
+    def debug(self, query: QSqlQuery):
+        if query.lastError().type() == QSqlError.NoError:
+            print("Query OK: %s " % query.lastQuery())
+        else:
+            print("Query Error: %s [%s]" % (query.lastError().text(), query.lastQuery()))

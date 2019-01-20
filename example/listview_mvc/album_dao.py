@@ -1,13 +1,14 @@
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from example.listview_mvc import Album
+from example.listview_mvc import Album, DbManager
 
 
 class AlbumDao:
     TABLE_NAME = 'albums'
 
-    def __init__(self, conn: QSqlDatabase = None) -> None:
+    def __init__(self, dbm: DbManager = None) -> None:
         super().__init__()
-        self._conn = conn
+        self._dbm: DbManager = dbm
+        self._conn = dbm.get_connection()
 
     def init(self) -> bool:
         """
@@ -31,6 +32,7 @@ class AlbumDao:
         query.prepare("insert into %s (name) values (:name)" % self.TABLE_NAME)
         query.bindValue(":name", album.name)
         query.exec_() # Bound values are replaced with proper values and executed
+        self._dbm.debug(query)
         # Grab the last id before finish() is called, otherwise it is lost
         last_id = query.lastInsertId()
         album._id = last_id
@@ -45,6 +47,7 @@ class AlbumDao:
         result = []
         query = QSqlQuery(self._conn)
         query.exec("select * from %s" % self.TABLE_NAME)
+        self._dbm.debug(query)
         rec = query.record()
         while query.next():
             album = Album()
@@ -67,6 +70,7 @@ class AlbumDao:
         query.bindValue(":name", album.name)
         query.bindValue(":id", album.id)
         result = query.exec_()  # Bound values are replaced with proper values and executed
+        self._dbm.debug(query)
         query.finish()
         return result
 
@@ -80,6 +84,7 @@ class AlbumDao:
         query.prepare("delete from %s where id = :id" % self.TABLE_NAME)
         query.bindValue(":id", album.id)
         result = query.exec_()  # Bound values are replaced with proper values and executed
+        self._dbm.debug(query)
         query.finish()
         return result
 
