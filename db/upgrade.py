@@ -32,7 +32,7 @@ class Upgrade:
             # Insert Local VM environment
             env_id = self._dao_environment.insert_env('Local VM')
             if env_id is not None:
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_HOST', 'tcp://10.0.0.17:2376'))
+                self._dao_environment.insert_env_setting(env_id, ('DOCKER_HOST', 'ssh://darkhorse@10.0.0.17'))
                 self._dao_environment.insert_env_setting(env_id, ('DOCKER_TLS_VERIFY', ''))
                 self._dao_environment.insert_env_setting(env_id, ('DOCKER_CERT_PATH', ''))
 
