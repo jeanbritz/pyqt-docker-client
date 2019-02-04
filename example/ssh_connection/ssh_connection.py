@@ -1,5 +1,7 @@
 import os
 
+from docker.client import DockerClient, APIClient
+from docker.errors import DockerException
 from docker.transport.sshconn import SSHAdapter
 from paramiko.agent import Agent
 from paramiko.util import log_to_file
@@ -35,3 +37,30 @@ finally:
     if adapter:
         print("SSH Adapter successfully initialized")
         adapter.close()
+
+
+print("----- TEST: Using DockerClient to Get Version of Docker Daemon -----")
+env = {'DOCKER_HOST': 'ssh://darkhorse@10.0.0.17'}
+kwargs = {'timeout': 60, 'version': 'auto', 'environment': env}
+client = None
+try:
+    client = DockerClient.from_env(**kwargs)
+    version = client.api.version()
+    print('Version: %s' % version)
+except DockerException as e:
+    print(e)
+finally:
+    if client:
+        client.close()
+
+print("----- TEST: Using APIClient to Get Version of Docker Daemon -----")
+client = None
+try:
+    client = APIClient(base_url='ssh://darkhorse@10.0.0.17')
+    version = client.version()
+    print('Version: %s' % version)
+except DockerException as e:
+    print(e)
+finally:
+    if client:
+        client.close()
