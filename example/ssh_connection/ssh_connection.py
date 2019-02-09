@@ -28,7 +28,7 @@ adapter = None
 print("----- TEST: Establish SSH Adapter -----")
 try:
     base_url = 'ssh://darkhorse@10.0.0.17:22'
-    adapter = SSHAdapter(base_url, timeout=60, pool_connections=1)
+    adapter = SSHAdapter(base_url, timeout=60, pool_connections=10)
 except NameError:
     raise Exception(
         'Install paramiko package to enable ssh:// support'
@@ -40,7 +40,7 @@ finally:
 
 
 print("----- TEST: Using DockerClient to Get Version of Docker Daemon -----")
-env = {'DOCKER_HOST': 'ssh://darkhorse@10.0.0.17'}
+env = {'DOCKER_HOST': 'ssh://darkhorse@10.0.0.17:2376'}
 kwargs = {'timeout': 60, 'version': 'auto', 'environment': env}
 client = None
 try:
@@ -56,7 +56,7 @@ finally:
 print("----- TEST: Using APIClient to Get Version of Docker Daemon -----")
 client = None
 try:
-    client = APIClient(base_url='ssh://darkhorse@10.0.0.17')
+    client = APIClient(base_url='ssh://darkhorse@10.0.0.17:2376')
     version = client.version()
     print('Version: %s' % version)
 except DockerException as e:
