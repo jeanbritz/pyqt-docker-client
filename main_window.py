@@ -1,7 +1,7 @@
 from PyQt5.Qt import QIcon, Qt, QEvent, QObject, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
 
-from environment.view import EnvConnectDialog
+from environment.view import EnvConnectDialog, EnvConfigureDialog
 from image import ImageDockWidget
 from image.view import DockerImageDialog, ImagePullDialog
 from network.view import NetworkDockWidget
@@ -11,7 +11,7 @@ from default_status_bar import DefaultStatusBar
 from i18n import Strings
 from container import ContainerConsoleDockWidget, ContainerDockWidget
 from core.docker_manager import DockerManager
-from core.auth import DockerLoginDialog
+from core.auth import RepositoryLoginDialog
 from qt_signal import GeneralSignals
 from util import DebugConsole, LoadingDialog
 
@@ -29,8 +29,9 @@ class MainWindow(QMainWindow):
         self._debug_console: DebugConsole = None
         self._loading_dialog: LoadingDialog = None
 
-        self.file_menu: QMenuBar = None
+        self.environment_menu: QMenuBar = None
         self.image_menu: QMenuBar = None
+        self.repository_menu: QMenuBar = None
         self.help_menu: QMenuBar = None
 
         self.toolbar: DefaultToolbar = None
@@ -53,9 +54,10 @@ class MainWindow(QMainWindow):
         self.general_signals = GeneralSignals()
         self.docker_manager: DockerManager = DockerManager(general_signals=self.general_signals)
 
+        self.env_configure_dialog: EnvConfigureDialog = None
         self.env_connect_dialog: EnvConnectDialog = None
         self.image_pull_dialog: ImagePullDialog = None
-        self.login_dialog: DockerLoginDialog = None
+        self.login_dialog: RepositoryLoginDialog = None
 
         self.init_db()
         self.init_ui()
@@ -70,13 +72,16 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon('assets/docker.svg'))
         self.setGeometry(self.top, self.left, self.width, self.height)
 
-        self.file_menu = self.menuBar().addMenu(Strings.FILE_MENU)
-        self.file_menu.addAction(QAction(Strings.LOGIN_ACTION, self, triggered=self.open_login_dialog))
-        self.file_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_env_connect_dialog))
-        self.file_menu.addAction(QAction(Strings.EXIT_ACTION, self, triggered=self.close))
+        self.environment_menu = self.menuBar().addMenu(Strings.ENVIRONMENT_MENU)
+        self.environment_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_env_connect_dialog))
+        self.environment_menu.addAction(QAction(Strings.CONFIGURE_ACTION, self, triggered=self.open_env_config_dialog))
 
         self.image_menu = self.menuBar().addMenu(Strings.IMAGE_MENU)
-        self.image_menu.addAction(QAction(Strings.PULL_ACTION, self,triggered=self.open_pull_image_dialog))
+        self.image_menu.addAction(QAction(Strings.PULL_ACTION, self, triggered=self.open_pull_image_dialog))
+
+        self.repository_menu = self.menuBar().addMenu(Strings.REPOSITORY_MENU)
+        self.repository_menu.addAction(QAction(Strings.LOGIN_ACTION, self, triggered=self.open_login_dialog))
+        self.repository_menu.addAction(QAction(Strings.CONFIGURE_ACTION, self))
 
         self.help_menu = self.menuBar().addMenu("Help")
         self.help_menu.addAction(QAction("About &Qt", self,
@@ -165,7 +170,7 @@ class MainWindow(QMainWindow):
         self.image_pull_dialog.open()
 
     def open_login_dialog(self):
-        self.login_dialog = DockerLoginDialog(parent=self, docker_manager=self.docker_manager)
+        self.login_dialog = RepositoryLoginDialog(parent=self, docker_manager=self.docker_manager)
         self.login_dialog.open()
 
     def open_env_connect_dialog(self):
@@ -173,9 +178,9 @@ class MainWindow(QMainWindow):
                                                    docker_manager=self.docker_manager)
         self.env_connect_dialog.open()
 
-    def close(self):
-        super().close(self)
-        self.docker_manager.close()
+    def open_env_config_dialog(self):
+        self.env_configure_dialog = EnvConfigureDialog(parent=self, dao=self.dao_env)
+        self.env_configure_dialog.open()
 
     def closeEvent(self, *args, **kwargs):
         """

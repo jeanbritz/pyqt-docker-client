@@ -5,11 +5,11 @@ from PyQt5.QtCore import Qt
 from i18n import Strings
 
 
-class DockerLoginDialog(QDialog):
+class RepositoryLoginDialog(QDialog):
 
     def __init__(self, parent=None, db_connection=None, docker_manager=None):
         # super().__init__(parent=None, flags=(Qt.Window | Qt.WindowStaysOnTopHint))
-        super(DockerLoginDialog, self).__init__(parent)
+        super(RepositoryLoginDialog, self).__init__(parent)
         self.setWindowIcon(parent.windowIcon())
 
         self._docker_manager = docker_manager
@@ -26,7 +26,7 @@ class DockerLoginDialog(QDialog):
         self._init_ui()
 
     def _init_ui(self):
-        self.setWindowTitle("Login")
+        self.setWindowTitle("Repository Login")
         self.setWindowModality(Qt.ApplicationModal)
         self.main_layout = QVBoxLayout()
         self.main_layout.addWidget(self._create_credentials_group_box())

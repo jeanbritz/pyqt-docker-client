@@ -1,6 +1,7 @@
 from PyQt5.QtSql import QSqlError
 
 from db import DbManager, DaoEnvironment, DaoRegistry
+from environment.model import DEnvEnvironment
 from util import Log
 
 
@@ -30,19 +31,18 @@ class Upgrade:
             self.handle_sql_error(self._conn.lastError())
 
             # Insert Local VM environment
-            env_id = self._dao_environment.insert_env('Local VM')
-            if env_id is not None:
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_HOST', 'ssh://darkhorse@10.0.0.17'))
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_TLS_VERIFY', ''))
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_CERT_PATH', ''))
+            env = self._dao_environment.create_env(DEnvEnvironment(name='Local VM'))
+            if env is not None:
+                self._dao_environment.create_env_setting(env, ('DOCKER_HOST', 'ssh://darkhorse@10.0.0.17:2376'))
+                self._dao_environment.create_env_setting(env, ('DOCKER_TLS_VERIFY', ''))
+                self._dao_environment.create_env_setting(env, ('DOCKER_CERT_PATH', ''))
 
             # Insert Linux environment
-            env_id = self._dao_environment.insert_env('Linux')
-
-            if env_id is not None:
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_HOST', 'unix:///var/run/docker.sock'))
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_TLS_VERIFY', ''))
-                self._dao_environment.insert_env_setting(env_id, ('DOCKER_CERT_PATH', ''))
+            env = self._dao_environment.create_env(DEnvEnvironment(name='Linux'))
+            if env is not None:
+                self._dao_environment.create_env_setting(env, ('DOCKER_HOST', 'unix:///var/run/docker.sock'))
+                self._dao_environment.create_env_setting(env, ('DOCKER_TLS_VERIFY', ''))
+                self._dao_environment.create_env_setting(env, ('DOCKER_CERT_PATH', ''))
 
             self._dao_registry.drop()
             self._dao_registry.init()

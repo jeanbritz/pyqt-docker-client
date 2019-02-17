@@ -1,1 +1,1 @@
-from core.auth.docker_login_dialog import DockerLoginDialog
+from core.auth.repository_login_dialog import RepositoryLoginDialog

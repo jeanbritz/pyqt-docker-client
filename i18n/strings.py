@@ -1,13 +1,17 @@
 class Strings:
     APP_NAME = "Docker Client"
     FILE_MENU = "File"
+    ENVIRONMENT_MENU = "Environment"
     IMAGE_MENU = "Image"
+    REPOSITORY_MENU = "Repository"
+
     READY = "Ready"
     ABOUT = "About"
 
     # Menubar Actions
     CONNECT_ACTION = "&Connect"
     PULL_ACTION = "&Pull"
+    CONFIGURE_ACTION = "Configure"
     LOGIN_ACTION = "&Login"
     OPEN_ACTION = "&Open"
     EXIT_ACTION = "E&xit"

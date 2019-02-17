@@ -29,6 +29,7 @@ class EnvConnectDialog(QDialog):
 
         self._dao = dao
         self._init_ui()
+
         self._set_data()
 
     def _init_ui(self):
@@ -42,9 +43,9 @@ class EnvConnectDialog(QDialog):
         self.setLayout(self.main_layout)
 
     def _set_data(self):
-        self._env_data = self._dao.list()
+        self._env_data = self._dao.environments()
         for key in self._env_data:
-            self._env_combo_box.addItem(key, self._env_data[key])
+            self._env_combo_box.addItem(key.name, key)
 
     def _create_connection_group_box(self):
         environment_group_box = QGroupBox("Environment")
@@ -81,10 +82,14 @@ class EnvConnectDialog(QDialog):
 
     def on_env_selection_change(self, index):
         env = self._env_combo_box.currentData()
-        try:
-            self._env_host_text_box.setText(env['DOCKER_HOST'])
-        except KeyError as e:
-            self._env_host_text_box.setText("")
+        settings = env.settings
+        for setting in settings:
+            if setting.name == 'DOCKER_HOST':
+                try:
+                    self._env_host_text_box.setText(setting.value)
+                except KeyError as e:
+                    self._env_host_text_box.setText("")
+                break
 
     def accept(self):
         env = self._env_data[self._env_combo_box.currentText()]
