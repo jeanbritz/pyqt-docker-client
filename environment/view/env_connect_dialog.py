@@ -92,9 +92,9 @@ class EnvConnectDialog(QDialog):
                 break
 
     def accept(self):
-        env = self._env_data[self._env_combo_box.currentText()]
-        Log.i('Loaded environment')
-        self._docker_manager.init_env(env=env)
+        selected = self._env_combo_box.currentData()
+        self._docker_manager.init_env(env=selected.settings_to_dict)
+
         super().reject()
 
     def reject(self):

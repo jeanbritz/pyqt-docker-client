@@ -34,7 +34,7 @@ class DockerManager(QObject):
             Log.i('Initialized communication using Docker Engine API version %s' % version['ApiVersion'])
             self._change_status(DockerManager.CONNECTED)
             self.refresh_all()
-
+            Log.i('Loaded environment')
         except DockerException as e:
             print("DockerManager :: %s" % e)
             self._change_status(DockerManager.DISCONNECTED)
@@ -76,7 +76,6 @@ class DockerManager(QObject):
 
     def stop_container(self, model: ContainerClientModel = None, timeout=120):
         self._general_signals.show_loading_signal.emit(True, 'Stopping %s ...' % model.names)
-        #self.log(model)
         result = self._client.api.stop(model.id, timeout=timeout)
         print('DockerManager :: Container Stop Result %s' % result)
         self._signals.refresh_containers_signal.emit(self._client.api.containers(all=True))

@@ -17,24 +17,29 @@ def handle_exception(exec_type, exec_value, exec_traceback):
         return
 
     file_name = os.path.split(exec_traceback.tb_frame.f_code.co_filename)[1]
-    print(file_name)
     detail_error = ''
-    for tb in traceback.extract_tb(exec_traceback):
-        detail_error += '\n{}\n{}:{}\n'.format(str(tb.line), str(tb.filename), str(tb.lineno))
-        print(exec_type, exec_value, file_name + ':' + str(exec_traceback.tb_lineno), tb)
-        # Log.e(exec_type, exec_value, file_name + ':' + str(exec_traceback.tb_lineno), tb)
-
-    Log.e(detail_error)
-
-    traceback.print_exc(file=sys.stdout)
-
+    last_filename = None
+    spacing = ''
+    for tb in traceback.format_tb(exec_traceback, 10):
+        pass
+        # print(tb)
+        #     if last_filename != tb.filename:
+        #         detail_error += '[+] {} - {}:{}\n'.format(str(tb.line), str(tb.filename), str(tb.lineno))
+        #         detail_error += spacing
+        #         spacing += '\t'
+        #     else:
+        #         detail_error += spacing
+        #         detail_error += '[-] {}:{}\n'.format(tb.line, tb.lineno)
+        #     last_filename = tb.filename
+        # for element in stack:
+    traceback.print_exc()
     tb = traceback.extract_tb(exec_traceback)
     msg = QMessageBox()
 
     msg.setIcon(QMessageBox.Critical)
     trace = traceback.format_exc()
 
-    msg.setText(str(exec_type))
+    msg.setText("Error has occurred")
     msg.setInformativeText(str(tb[len(tb) - 1].line))
     msg.setWindowTitle(Strings.ERROR)
     msg.setDetailedText(detail_error)

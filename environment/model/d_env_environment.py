@@ -18,6 +18,13 @@ class DEnvEnvironment:
     def settings(self) -> list:
         return self._settings
 
+    @property
+    def settings_to_dict(self) -> dict:
+        result = {}
+        for setting in self._settings:
+            result[setting.name] = setting.value
+        return result
+
     def __repr__(self) -> str:
         return "[id: %d, name: %s, settings: %s]" % (self._id, self._name, self._settings)
 
