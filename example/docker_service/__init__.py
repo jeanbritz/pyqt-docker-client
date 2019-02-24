@@ -1,2 +1,2 @@
-from example.docker_service.threads.manager_thread import ManagerSignals
-from example.docker_service.threads.manager_thread import ManagerThread
+from example.docker_service.manager_thread import ManagerSignals
+from example.docker_service.manager_thread import Manager

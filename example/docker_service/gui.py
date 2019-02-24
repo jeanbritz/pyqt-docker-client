@@ -2,7 +2,7 @@ import sys
 
 from PyQt5.Qt import QApplication, QVBoxLayout, QPushButton, QWidget, QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QMainWindow, QLabel
-from example.docker_service.threads.manager_thread import ManagerThread
+from example.docker_service.manager_thread import Manager, ManagerStatus
 
 
 class MainWindow(QMainWindow):
@@ -38,9 +38,9 @@ class MainWindow(QMainWindow):
         self.manager_thread = None
         self.manager_worker = None
 
-    @pyqtSlot(int)
+    @pyqtSlot(ManagerStatus)
     def manager_status_change(self, status):
-        self.status_label.setText(str(status))
+        self.status_label.setText(status.value)
 
     def stop_manager(self):
         self.signal_stop_worker.emit()
@@ -50,7 +50,7 @@ class MainWindow(QMainWindow):
         env = {'DOCKER_CERT_PATH': '',
                'DOCKER_HOST': 'tcp://10.0.0.17:2375',
                'DOCKER_TLS_VERIFY': ''}
-        self.manager_worker = ManagerThread(env=env)
+        self.manager_worker = Manager(env=env)
         self.manager_thread.setObjectName("Manager Thread")
         self.manager_worker.signals().status_change.connect(self.manager_status_change)
         self.signal_stop_worker.connect(self.manager_worker.abort)
