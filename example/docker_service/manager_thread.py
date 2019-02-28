@@ -25,16 +25,17 @@ class Manager(QObject):
         print("Started Manager")
         while self._stop is not True:
             if self._status == ManagerStatus.DISCONNECTED:
-                print("Trying to contact Docker Daemon")
-                # Try to connect
                 try:
+                    # Try to connect
+                    print("Attempt to contact Docker Daemon")
+                    self._change_status(ManagerStatus.ATTEMPT_CONNECT)
                     self.init_env(env=self._env)
                     self._last_ping = datetime.now()
                 except DockerException as e:
                     print(e.args)
                     self._stop = True
                     self._change_status(ManagerStatus.DISCONNECTED)
-            time.sleep(5)
+            time.sleep(2)
             if self._status == ManagerStatus.CONNECTED:
                 diff = (datetime.now() - self._last_ping).total_seconds()
                 if diff > 30:
