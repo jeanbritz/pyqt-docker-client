@@ -1,12 +1,18 @@
 import os
+import logging
 
-from docker.client import DockerClient, APIClient
+from docker.client import DockerClient
 from docker.errors import DockerException
-from docker.transport.sshconn import SSHAdapter
 from paramiko.agent import Agent
 from paramiko.util import log_to_file
 
 log_to_file("paramiko.log", level="DEBUG")
+
+logging.basicConfig()
+logging.getLogger().setLevel(logging.DEBUG)
+requests_log = logging.getLogger("requests")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
 
 print("Test only applicable if GUI application runs on Windows 10")
 print("---- TEST: ssh-agent env variables ----")
@@ -24,43 +30,14 @@ if keys:
 else:
     print("Pagent is not running.")
 
-adapter = None
-print("----- TEST: Establish SSH Adapter -----")
-try:
-    base_url = 'ssh://darkhorse@10.0.0.17:22'
-    adapter = SSHAdapter(base_url, timeout=60, pool_connections=10)
-except NameError:
-    raise Exception(
-        'Install paramiko package to enable ssh:// support'
-    )
-finally:
-    if adapter:
-        print("SSH Adapter successfully initialized")
-        adapter.close()
-
 
 print("----- TEST: Using DockerClient to Get Version of Docker Daemon -----")
-env = {'DOCKER_HOST': 'ssh://darkhorse@10.0.0.17:2376'}
+env = {'DOCKER_HOST': 'ssh://darkhorse@10.0.0.17'}
 kwargs = {'timeout': 60, 'version': 'auto', 'environment': env}
-client = None
 try:
     client = DockerClient.from_env(**kwargs)
     version = client.api.version()
-    print('Version: %s' % version)
+    print("Version: %s" % version)
+    print('Loaded environment')
 except DockerException as e:
     print(e)
-finally:
-    if client:
-        client.close()
-
-print("----- TEST: Using APIClient to Get Version of Docker Daemon -----")
-client = None
-try:
-    client = APIClient(base_url='ssh://darkhorse@10.0.0.17:2376')
-    version = client.version()
-    print('Version: %s' % version)
-except DockerException as e:
-    print(e)
-finally:
-    if client:
-        client.close()
