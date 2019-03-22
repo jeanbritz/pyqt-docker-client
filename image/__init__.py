@@ -1,1 +1,0 @@
-from image.view.image_dock_widget import ImageDockWidget

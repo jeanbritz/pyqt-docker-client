@@ -1,5 +1,4 @@
 import sys
-import os
 import traceback
 
 from PyQt5.Qt import QApplication, QSizePolicy
@@ -15,34 +14,19 @@ def handle_exception(exec_type, exec_value, exec_traceback):
     if issubclass(exec_type, KeyboardInterrupt):
         sys.__excepthook__(exec_type, exec_value, exec_traceback)
         return
-
-    file_name = os.path.split(exec_traceback.tb_frame.f_code.co_filename)[1]
     detail_error = ''
-    last_filename = None
-    spacing = ''
-    for tb in traceback.format_tb(exec_traceback, 10):
-        pass
-        # print(tb)
-        #     if last_filename != tb.filename:
-        #         detail_error += '[+] {} - {}:{}\n'.format(str(tb.line), str(tb.filename), str(tb.lineno))
-        #         detail_error += spacing
-        #         spacing += '\t'
-        #     else:
-        #         detail_error += spacing
-        #         detail_error += '[-] {}:{}\n'.format(tb.line, tb.lineno)
-        #     last_filename = tb.filename
-        # for element in stack:
-    traceback.print_exc()
-    tb = traceback.extract_tb(exec_traceback)
+    print("============= UNHANDLED EXCEPTION =============")
+    for line in traceback.format_exception(exec_type, exec_value, exec_traceback):
+        detail_error += line
+    print(detail_error)
+    print("===============================================")
+
     msg = QMessageBox()
-
     msg.setIcon(QMessageBox.Critical)
-    trace = traceback.format_exc()
 
-    msg.setText("Error has occurred")
-    msg.setInformativeText(str(tb[len(tb) - 1].line))
+    msg.setText("Error has occurred. See logs for more details")
+    msg.setInformativeText(exec_value.__repr__())
     msg.setWindowTitle(Strings.ERROR)
-    msg.setDetailedText(detail_error)
     msg.setStandardButtons(QMessageBox.Ok)
 
     horizontal_spacer = QSpacerItem(512, 0, QSizePolicy.Minimum, QSizePolicy.Expanding)

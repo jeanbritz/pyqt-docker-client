@@ -4,17 +4,16 @@ from PyQt5.QtWidgets import QDialog, QLayout, QGroupBox, QVBoxLayout, QFormLayou
     QDialogButtonBox, QComboBox
 from PyQt5.QtCore import Qt
 
-from util import Log
+from qt_signal.docker_signal import DockerSignals
 
 
 class EnvConnectDialog(QDialog):
 
-    def __init__(self, parent=None, dao=None, docker_manager=None):
+    def __init__(self, parent=None, dao=None):
         # super().__init__(parent=None, flags=(Qt.Window | Qt.WindowStaysOnTopHint))
         super(EnvConnectDialog, self).__init__(parent)
         self.setWindowIcon(parent.windowIcon())
 
-        self._docker_manager = docker_manager
         self._main_layout: QLayout = None
         self._button_box: QDialogButtonBox = None
 
@@ -24,7 +23,7 @@ class EnvConnectDialog(QDialog):
         self._use_tls_check_box: QCheckBox = None
         self._verify_host_check_box: QCheckBox = None
         self._cert_path_text_box: QLineEdit = None
-
+        self._signals = DockerSignals()
         self._env_data = None
 
         self._dao = dao
@@ -93,8 +92,7 @@ class EnvConnectDialog(QDialog):
 
     def accept(self):
         selected = self._env_combo_box.currentData()
-        self._docker_manager.init_env(env=selected.settings_to_dict)
-
+        self._signals.start_docker_service.emit(selected)
         super().reject()
 
     def reject(self):
@@ -103,3 +101,7 @@ class EnvConnectDialog(QDialog):
     def on_use_tls_changed(self):
         self._verify_host_check_box.setEnabled(self._use_tls_check_box.isChecked())
         self._cert_path_text_box.setEnabled(self._use_tls_check_box.isChecked())
+
+    def signals(self):
+        return self._signals
+

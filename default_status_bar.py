@@ -1,8 +1,7 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import pyqtSlot, QVariant
 
-from core.docker_manager import DockerManager
-from qt_signal import DockerSignals
+from core.docker_manager_service import ManagerStatus
 
 
 class DefaultStatusBar(QStatusBar):
@@ -18,9 +17,6 @@ class DefaultStatusBar(QStatusBar):
         self.text = QLabel("Status")
         self.addPermanentWidget(self.text, 0)
 
-    @pyqtSlot(int, name=DockerSignals.DOCKER_STATUS_CHANGE_SIGNAL)
-    def on_stats_update(self, state):
-        if state == DockerManager.CONNECTED:
-            self.text.setText("Connected")
-        if state == DockerManager.DISCONNECTED:
-            self.text.setText("Disconnected")
+    @pyqtSlot(ManagerStatus)
+    def on_stats_update(self, status):
+        self.text.setText(status.value)
