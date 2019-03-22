@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 from PyQt5.QtCore import pyqtSlot, Qt
 
 from core import ContainerClientModel
-from qt_signal import DockerSignals
 from util import DebugConsole
 
 
@@ -11,7 +10,7 @@ class DockerContainerListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    @pyqtSlot(list, name=DockerSignals.DOCKER_REFRESH_CONTAINERS_SIGNAL)
+    @pyqtSlot(list, name='docker_refresh_containers_signal')
     def refresh_containers(self, containers=None):
         self.clear()
 

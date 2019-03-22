@@ -31,14 +31,15 @@ class Log:
         logger.info(msg)
 
     @staticmethod
-    def e(msg=None):
+    def e(msg=None, exc_info=None):
         """
         Log error message
         :param self:
         :param msg:
+        :param exc_info
         :return:
         """
-        logger.error(msg, exc_info=True)
+        logger.exception(msg, exc_info=exc_info)
 
     @staticmethod
     def w(msg=None):

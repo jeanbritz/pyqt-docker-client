@@ -1,6 +1,9 @@
+from datetime import datetime
 import enum
+import time
 
-from PyQt5.QtCore import pyqtSlot, QObject
+
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QObject
 from PyQt5.QtWidgets import QAction
 
 from docker import DockerClient
@@ -8,39 +11,86 @@ from docker.models.resource import Model
 from docker.models.containers import Container
 
 from core import ContainerClientModel
-from util import Log,  DebugConsole
+from util import Log
 from i18n import Strings
-from qt_signal.docker_signal import DockerSignals
 from qt_signal import ToolbarSignals
 from docker.errors import DockerException, APIError
+from requests.exceptions import ConnectionError
 
+class DockerService(QObject):
 
-class DockerManager(QObject):
-
-    def __init__(self, general_signals=None):
+    def __init__(self):
         super().__init__()
         self._client: DockerClient = None
         self._status = ManagerStatus.DISCONNECTED
-        self._signals = DockerSignals()
-        self._general_signals = general_signals
+        self._signals = ManagerSignals()
+        self._last_ping = 0
+        self._stop = False
+        self._kwargs = {}
+        self._env = None
 
-    def init_env(self, timeout=120, version='auto', env=None):
-        kwargs = {'timeout': timeout, 'version': version, 'environment': env}
+    @pyqtSlot()
+    def run(self):
+        Log.i("Manager Started [%s]" % self._env.name)
+        while self._stop is not True:
+            if self._status == ManagerStatus.DISCONNECTED:
+                try:
+                    Log.i("Attempt to contact Docker Daemon")
+                    self._change_status(ManagerStatus.ATTEMPT_CONNECT)
+                    self._client = DockerClient.from_env(**self._kwargs)
+                    self._last_ping = datetime.now()
+                    Log.i("Connected to Docker Daemon")
+                    self._change_status(ManagerStatus.CONNECTED)
+                except DockerException as e:
+                    Log.e(e)
+                    self._stop = True
+                    self._change_status(ManagerStatus.DISCONNECTED)
+            time.sleep(2)
+            if self._status == ManagerStatus.CONNECTED:
+
+                diff = (datetime.now() - self._last_ping).total_seconds()
+                if diff > 30:
+                    try:
+                        if self._ping():
+                            self._last_ping = datetime.now()
+                            Log.i("Docker Daemon is responsive")
+                    except APIError as e:
+                        Log.e(e)
+                        Log.i("Docker Daemon became unresponsive")
+                        self._change_status(ManagerStatus.DISCONNECTED)
+
+        self._close()
+        Log.i("Manager stopped")
+
+    def init_env(self, env=None):
+        """
+        Initialize environment variables and try to connect to Docker Daemon
+        :param env: Environment Object
+        :return:
+        """
+        self._last_ping = 0
+        self._stop = False
+        self._env = env
+        self._kwargs = {'timeout': 120, 'version': 'auto', 'environment': env.settings_to_dict}
+
+    def _ping(self):
+        """
+        Ping the Docker Daemon
+        :return:
+        """
         try:
-            self._client = DockerClient.from_env(**kwargs)
-            version = self._client.api.version()
-            DebugConsole.println('Environment loaded for %s' % env['DOCKER_HOST'])
-            Log.i('Initialized communication using Docker Engine API version %s' % version['ApiVersion'])
-            self._change_status(ManagerStatus.CONNECTED)
-            self.refresh_all()
-            Log.i('Loaded environment')
-        except DockerException as e:
-            print("DockerManager :: %s" % e)
+            return self._client.ping()
+        except ConnectionError as e:
+            Log.e(e)
+            Log.i("Docker Daemon became unresponsive")
             self._change_status(ManagerStatus.DISCONNECTED)
-            DebugConsole.println('Docker Client could not load environment')
-            Log.e('Docker Client could not load environment')
+            return False
 
-    def close(self):
+    def _close(self):
+        """
+        Close connection to Docker Daemon
+        :return:
+        """
         if self._client is not None:
             self._client.close()
             self._change_status(ManagerStatus.DISCONNECTED)
@@ -101,9 +151,9 @@ class DockerManager(QObject):
                 if action.text() == Strings.PLAY_ACTION and model.state == 'exited':
                     self._client.api.start(model.id)
                 if action.text() == Strings.STOP_ACTION and model.state == 'running':
+                    pass
                     # thread = DockerOperationThread(docker_manager=self, model=model, operation=Operation.STOP_CONTAINER)
                     # thread.start()
-                    pass
 
                 self._signals.refresh_containers_signal.emit(self._client.api.containers(all=True))
         except APIError as e:
@@ -115,4 +165,10 @@ class ManagerStatus(enum.Enum):
     DISCONNECTED = 'Disconnected'
     CONNECTED = 'Connected'
     ATTEMPT_CONNECT = 'Attempt to connect'
+    RECONNECT = 'Reconnect'
 
+
+class ManagerSignals(QObject):
+
+    error = pyqtSignal(str)
+    status_change_signal = pyqtSignal(ManagerStatus)

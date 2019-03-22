@@ -8,7 +8,6 @@ class ContainerConsoleDockWidget(QDockWidget):
 
     def __init__(self, *__args):
         super().__init__(*__args)
-        print(self.titleBarWidget())
 
         self._main_widget: QTextEdit = None
 
