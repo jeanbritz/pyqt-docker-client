@@ -33,7 +33,7 @@ class Upgrade:
             # Insert Local VM environment
             env = self._dao_environment.create_env(DEnvEnvironment(name='Local VM'))
             if env is not None:
-                self._dao_environment.create_env_setting(env, ('DOCKER_HOST', 'tcp://10.0.0.17:2375'))
+                self._dao_environment.create_env_setting(env, ('DOCKER_HOST', 'tcp://10.0.0.13:2375'))
                 self._dao_environment.create_env_setting(env, ('DOCKER_TLS_VERIFY', ''))
                 self._dao_environment.create_env_setting(env, ('DOCKER_CERT_PATH', ''))
 

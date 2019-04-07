@@ -10,12 +10,13 @@ from docker import DockerClient
 from docker.models.resource import Model
 from docker.models.containers import Container
 
-from core import ContainerClientModel
+from core import ContainerClientModel, DockerEntity
 from util import Log
 from i18n import Strings
 from qt_signal import ToolbarSignals
 from docker.errors import DockerException, APIError
 from requests.exceptions import ConnectionError
+
 
 class DockerService(QObject):
 
@@ -34,20 +35,9 @@ class DockerService(QObject):
         Log.i("Manager Started [%s]" % self._env.name)
         while self._stop is not True:
             if self._status == ManagerStatus.DISCONNECTED:
-                try:
-                    Log.i("Attempt to contact Docker Daemon")
-                    self._change_status(ManagerStatus.ATTEMPT_CONNECT)
-                    self._client = DockerClient.from_env(**self._kwargs)
-                    self._last_ping = datetime.now()
-                    Log.i("Connected to Docker Daemon")
-                    self._change_status(ManagerStatus.CONNECTED)
-                except DockerException as e:
-                    Log.e(e)
-                    self._stop = True
-                    self._change_status(ManagerStatus.DISCONNECTED)
+                self._connect()
             time.sleep(2)
             if self._status == ManagerStatus.CONNECTED:
-
                 diff = (datetime.now() - self._last_ping).total_seconds()
                 if diff > 30:
                     try:
@@ -64,8 +54,8 @@ class DockerService(QObject):
 
     def init_env(self, env=None):
         """
-        Initialize environment variables and try to connect to Docker Daemon
-        :param env: Environment Object
+        Initialize environment variables
+        :param env: DEnvEnvironment Object
         :return:
         """
         self._last_ping = 0
@@ -86,6 +76,20 @@ class DockerService(QObject):
             self._change_status(ManagerStatus.DISCONNECTED)
             return False
 
+    def _connect(self):
+        try:
+            Log.i("Attempt to contact Docker Daemon")
+            self._change_status(ManagerStatus.ATTEMPT_CONNECT)
+            self._client = DockerClient.from_env(**self._kwargs)
+            self._last_ping = datetime.now()
+            Log.i("Connected to Docker Daemon")
+            self._change_status(ManagerStatus.CONNECTED)
+            self.refresh_all()
+        except DockerException as e:
+            Log.e(e)
+            self._stop = True
+            self._change_status(ManagerStatus.DISCONNECTED)
+
     def _close(self):
         """
         Close connection to Docker Daemon
@@ -96,6 +100,11 @@ class DockerService(QObject):
             self._change_status(ManagerStatus.DISCONNECTED)
 
     def _change_status(self, status):
+        """
+        Broadcasts Docker Service status change
+        :param status:
+        :return:
+        """
         self._status = status
         # Broadcast the status change
         self._signals.status_change_signal.emit(self._status)
@@ -106,15 +115,21 @@ class DockerService(QObject):
     def signals(self):
         return self._signals
 
+    def abort(self):
+        """
+        Abort the Docker Service to continue
+        :return:
+        """
+        self._stop = True
+
     def refresh_all(self):
-        self._signals.refresh_images_signal.emit(self._client.api.images(all=True))
-        self._signals.refresh_containers_signal.emit(self._client.api.containers(all=True))
-        self._signals.refresh_networks_signal.emit(self._client.networks.list())
+        self._signals.refresh_signal.emit(DockerEntity.IMAGE, self._client.api.images(all=True))
+        self._signals.refresh_signal.emit(DockerEntity.CONTAINER, self._client.api.containers(all=True))
+        self._signals.refresh_signal.emit(DockerEntity.NETWORK, self._client.networks.list())
 
     def login(self, username=None, password=None, reauth=False, registry=None):
         try:
             result = self._client.api.login(username=username, password=password, reauth=reauth, registry=registry)
-            print('Result = %s' % result)
             return result
         except APIError as e:
             return e.explanation
@@ -126,7 +141,7 @@ class DockerService(QObject):
     def stop_container(self, model: ContainerClientModel = None, timeout=120):
         self._general_signals.show_loading_signal.emit(True, 'Stopping %s ...' % model.names)
         result = self._client.api.stop(model.id, timeout=timeout)
-        print('DockerManager :: Container Stop Result %s' % result)
+        Log.i('Container Stop Result %s' % result)
         self._signals.refresh_containers_signal.emit(self._client.api.containers(all=True))
         self._general_signals.show_loading_signal.emit(False, '')
 
@@ -172,3 +187,4 @@ class ManagerSignals(QObject):
 
     error = pyqtSignal(str)
     status_change_signal = pyqtSignal(ManagerStatus)
+    refresh_signal = pyqtSignal(DockerEntity, list, name='docker_refresh_signal')

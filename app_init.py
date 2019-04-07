@@ -38,6 +38,7 @@ def handle_exception(exec_type, exec_value, exec_traceback):
 
 def main():
     global app
+    global threads
     Log.__init__(None)
     Log.i("Performing DB Init")
     upgrade = Upgrade()
@@ -52,6 +53,8 @@ def main():
     window = MainWindow()
     app.setActiveWindow(window)
     window.show()
+
+    threads = []
 
     sys.excepthook = handle_exception
     sys.exit(app.exec_())

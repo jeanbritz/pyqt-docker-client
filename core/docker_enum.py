@@ -15,3 +15,9 @@ class Operation(enum.Enum):
 
     STOP_CONTAINER = 'op_stop_container'
 
+
+class DockerEntity(enum.Enum):
+
+    IMAGE = 'image'
+    CONTAINER = 'container'
+    NETWORK = 'network'

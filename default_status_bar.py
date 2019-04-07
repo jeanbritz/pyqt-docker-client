@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel
 from PyQt5.QtCore import pyqtSlot, QVariant
 
-from core.docker_manager_service import ManagerStatus
+from core.docker_service import ManagerStatus
 
 
 class DefaultStatusBar(QStatusBar):

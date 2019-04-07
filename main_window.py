@@ -1,4 +1,4 @@
-from PyQt5.Qt import QIcon, Qt, QThread, pyqtSlot
+from PyQt5.Qt import QIcon, Qt, QThread, pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
 
 from environment.view import EnvConnectDialog, EnvConfigureDialog
@@ -10,7 +10,7 @@ from core.toolbar import DefaultToolbar
 from default_status_bar import DefaultStatusBar
 from i18n import Strings
 from container import ContainerConsoleDockWidget, ContainerDockWidget
-from core.docker_manager_service import DockerService
+from core.docker_service import DockerService
 from core.auth import RepositoryLoginDialog
 from qt_signal import GeneralSignals
 from qt_signal.docker_signal import DockerSignals
@@ -112,8 +112,8 @@ class MainWindow(QMainWindow):
 
     def init_toolbar(self):
         self.toolbar = DefaultToolbar(self)
-        # self.toolbar.signals().clicked_signal.connect(self.docker_service.on_toolbar_action)
-        # self.toolbar.signals().refresh_signal.connect(self.docker_service.on_refresh_action)
+        self.toolbar.signals().clicked_signal.connect(self.docker_service.on_toolbar_action)
+        self.toolbar.signals().refresh_signal.connect(self.docker_service.on_refresh_action)
         self.docker_service.signals().status_change_signal.connect(self.toolbar.on_docker_manager_status_change)
         self.addToolBar(self.toolbar)
 
@@ -128,22 +128,20 @@ class MainWindow(QMainWindow):
 
     def add_docker_images_view(self):
         self.image_dock_widget = ImageDockWidget(Strings.IMAGES, signals=self.general_signals)
-        # self.docker_service.signals().refresh_images_signal.connect(self.image_dock_widget.list_widget().refresh_images)
+        self.docker_service.signals().refresh_signal.connect(self.image_dock_widget.list_widget().refresh_images)
         self.addDockWidget(Qt.RightDockWidgetArea, self.image_dock_widget)
 
         self.image_detail_view = DockerImageDialog()
 
     def add_docker_container_view(self):
         self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS, signals=self.general_signals, dialog=self.container_console_widget)
-        # self.docker_service.signals().refresh_containers_signal.connect(self.container_dock_widget.list_widget()
-        #                                                                 .refresh_containers)
+        self.docker_service.signals().refresh_signal.connect(self.container_dock_widget.list_widget().refresh_containers)
         self.container_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
         self.addDockWidget(Qt.RightDockWidgetArea, self.container_dock_widget)
 
     def add_docker_network_view(self):
         self.network_dock_widget = NetworkDockWidget(Strings.NETWORKS, signals=self.general_signals)
-        # self.docker_service.signals().refresh_networks_signal.connect(self.network_dock_widget.list_widget()
-        #                                                               .refresh_networks)
+        self.docker_service.signals().refresh_signal.connect(self.network_dock_widget.list_widget().refresh_networks)
         self.network_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
         self.addDockWidget(Qt.RightDockWidgetArea, self.network_dock_widget)
 
@@ -192,7 +190,7 @@ class MainWindow(QMainWindow):
         :param kwargs:
         :return:
         """
-        self.docker_service.close()
+        self.general_signals.stop_docker_service_signal.emit()
 
     def on_container_clicked(self, container):
         pass
@@ -200,6 +198,8 @@ class MainWindow(QMainWindow):
     @pyqtSlot(DEnvEnvironment, name=DockerSignals.DOCKER_START_SERVICE_SIGNAL)
     def start_docker_service(self, env=None):
         self.docker_service.init_env(env=env)
+        self.general_signals.stop_docker_service_signal.connect(self.docker_service.abort)
+        self.toolbar.signals().refresh_signal.connect(self.docker_service.refresh_all)
         thread = QThread()
         thread.setObjectName("DockerService")
         self.docker_service.moveToThread(thread)

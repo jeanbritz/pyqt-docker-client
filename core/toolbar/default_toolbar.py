@@ -6,7 +6,7 @@ from core import ContainerClientModel, ClientModel
 from core.docker_enum import ContainerStatus
 from i18n import Strings
 from qt_signal import GeneralSignals, ToolbarSignals
-from core.docker_manager_service import ManagerStatus
+from core.docker_service import ManagerStatus
 
 
 class DefaultToolbar(QToolBar):
