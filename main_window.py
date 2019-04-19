@@ -10,6 +10,7 @@ from core.toolbar import DefaultToolbar
 from default_status_bar import DefaultStatusBar
 from i18n import Strings
 from container import ContainerConsoleDockWidget, ContainerDockWidget
+from environment.view import EnvListWidget
 from core.docker_service import DockerService
 from core.auth import RepositoryLoginDialog
 from qt_signal import GeneralSignals
@@ -54,6 +55,7 @@ class MainWindow(QMainWindow):
         self.dao_registry: DaoRegistry = None
 
         self.general_signals = GeneralSignals()
+        self.docker_signals = DockerSignals()
 
         self.threads = []
 
@@ -95,6 +97,7 @@ class MainWindow(QMainWindow):
         self.init_toolbar()
         self.init_status_bar()
 
+        self.add_docker_environment_view()
         self.add_docker_images_view()
         self.add_container_console_view()
         self.add_docker_container_view()
@@ -104,6 +107,7 @@ class MainWindow(QMainWindow):
         self.add_debug_console(debug=self._debug_console)
 
         self.container_dock_widget.list_widget().clicked.connect(self.on_container_clicked)
+
 
     def init_db(self):
         self.db = DbManager()
@@ -125,6 +129,13 @@ class MainWindow(QMainWindow):
     def on_image_clicked(self, item = None):
         self.image_detail_view.set_data(item.data(Qt.UserRole).attrs)
         self.image_detail_view.show()
+
+    def add_docker_environment_view(self):
+        dock_widget = QDockWidget()
+        env_list_widget = EnvListWidget(dao=self.dao_env, signals=self.docker_signals)
+        self.docker_signals.start_docker_service.connect(self.start_docker_service)
+        dock_widget.setWidget(env_list_widget)
+        self.addDockWidget(Qt.LeftDockWidgetArea, dock_widget)
 
     def add_docker_images_view(self):
         self.image_dock_widget = ImageDockWidget(Strings.IMAGES, signals=self.general_signals)

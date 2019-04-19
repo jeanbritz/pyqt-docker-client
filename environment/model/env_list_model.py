@@ -5,8 +5,9 @@ from environment.model import DEnvEnvironment
 
 class EnvironmentListModel(QAbstractListModel):
 
-    id_role = Qt.UserRole + 1
-    name_role = id_role + 1
+    ID_ROLE = Qt.UserRole + 1
+    NAME_ROLE = ID_ROLE + 1
+    DATA_ROLE = NAME_ROLE + 1
 
     def __init__(self, parent=None, dao=None):
         """
@@ -22,7 +23,7 @@ class EnvironmentListModel(QAbstractListModel):
         row_index = self.rowCount()
         self.beginInsertRows(QModelIndex(), row_index, row_index)
 
-        updated_env =self._dao.create_env(env)
+        updated_env = self._dao.create_env(env)
         self._data.append(updated_env)
         self.endInsertRows()
         return self.index(row_index, 0)
@@ -36,15 +37,17 @@ class EnvironmentListModel(QAbstractListModel):
 
         environment = self._data[index.row()] # Data is 1-dimensional array
 
-        if role == self.id_role:
+        if role == self.ID_ROLE:
             return environment.id
-        elif role in (Qt.DisplayRole, self.name_role):
+        elif role in (Qt.DisplayRole, self.NAME_ROLE):
             return environment.name
+        elif role is self.DATA_ROLE:
+            return environment
         else:
             return QVariant()
 
-    def setData(self, index: QModelIndex, value:QVariant, role=None):
-        if not self._is_index_valid(index) or role is not self.name_role:
+    def setData(self, index: QModelIndex, value: QVariant, role=None):
+        if not self._is_index_valid(index) or role is not self.NAME_ROLE:
             return False
         environment = self._data[index.row()]
         environment._name = value
@@ -67,7 +70,7 @@ class EnvironmentListModel(QAbstractListModel):
         return True
 
     def roleNames(self):
-        return {self.id_role: 'id', self.name_role: 'name'}
+        return {self.ID_ROLE: 'id', self.NAME_ROLE: 'name'}
 
     def _is_index_valid(self, index: QModelIndex) -> bool:
         if index.row() < 0 or index.row() >= self.rowCount() or not index.isValid():

@@ -1,2 +1,3 @@
 from environment.view.env_connect_dialog import EnvConnectDialog
 from environment.view.env_configure_dialog import EnvConfigureDialog
+from environment.view.env_list_widget import EnvListWidget

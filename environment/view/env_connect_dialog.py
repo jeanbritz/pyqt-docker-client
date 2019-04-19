@@ -23,7 +23,7 @@ class EnvConnectDialog(QDialog):
         self._use_tls_check_box: QCheckBox = None
         self._verify_host_check_box: QCheckBox = None
         self._cert_path_text_box: QLineEdit = None
-        self._signals = DockerSignals()
+
         self._env_data = None
 
         self._dao = dao
