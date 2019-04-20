@@ -4,7 +4,7 @@ from PyQt5.QtCore import pyqtSlot, QVariant
 from core.docker_service import ManagerStatus
 
 
-class DefaultStatusBar(QStatusBar):
+class DockerStatusBar(QStatusBar):
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -14,9 +14,9 @@ class DefaultStatusBar(QStatusBar):
         self._init_ui()
 
     def _init_ui(self):
-        self.text = QLabel("Status")
+        self.text = QLabel("")
         self.addPermanentWidget(self.text, 0)
 
     @pyqtSlot(ManagerStatus)
-    def on_stats_update(self, status):
+    def on_change(self, status):
         self.text.setText(status.value)

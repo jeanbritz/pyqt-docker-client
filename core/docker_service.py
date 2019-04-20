@@ -10,7 +10,8 @@ from docker import DockerClient
 from docker.models.resource import Model
 from docker.models.containers import Container
 
-from core import ContainerClientModel, DockerEntity
+from core import ContainerClientModel, DockerEntity, ClientModel
+from core.docker_enum import ContainerStatus
 from util import Log
 from i18n import Strings
 from qt_signal import ToolbarSignals
@@ -52,7 +53,7 @@ class DockerService(QObject):
         self._close()
         Log.i("Manager stopped")
 
-    def init_env(self, env=None):
+    def init_env(self, env=None, queue=None):
         """
         Initialize environment variables
         :param env: DEnvEnvironment Object
@@ -61,6 +62,7 @@ class DockerService(QObject):
         self._last_ping = 0
         self._stop = False
         self._env = env
+        self._queue = queue
         self._kwargs = {'timeout': 120, 'version': 'auto', 'environment': env.settings_to_dict}
 
     def _ping(self):
@@ -109,6 +111,9 @@ class DockerService(QObject):
         # Broadcast the status change
         self._signals.status_change_signal.emit(self._status)
 
+    def client(self):
+        return self._client
+
     def status(self):
         return self._status
 
@@ -125,7 +130,7 @@ class DockerService(QObject):
     def refresh_all(self):
         self._signals.refresh_signal.emit(DockerEntity.IMAGE, self._client.api.images(all=True))
         self._signals.refresh_signal.emit(DockerEntity.CONTAINER, self._client.api.containers(all=True))
-        self._signals.refresh_signal.emit(DockerEntity.NETWORK, self._client.networks.list())
+        self._signals.refresh_signal.emit(DockerEntity.NETWORK, self._client.api.networks())
 
     def login(self, username=None, password=None, reauth=False, registry=None):
         try:
@@ -158,21 +163,7 @@ class DockerService(QObject):
     def on_refresh_action(self):
         self.refresh_all()
 
-    @pyqtSlot(QAction, Model, name=ToolbarSignals.TOOLBAR_CLICKED_SIGNAL)
-    def on_toolbar_action(self, action: QAction, model: Model = None):
-        try:
 
-            if isinstance(model, ContainerClientModel):
-                if action.text() == Strings.PLAY_ACTION and model.state == 'exited':
-                    self._client.api.start(model.id)
-                if action.text() == Strings.STOP_ACTION and model.state == 'running':
-                    pass
-                    # thread = DockerOperationThread(docker_manager=self, model=model, operation=Operation.STOP_CONTAINER)
-                    # thread.start()
-
-                self._signals.refresh_containers_signal.emit(self._client.api.containers(all=True))
-        except APIError as e:
-            print("DockerManager :: API Error :: %s" % e)
 
 
 class ManagerStatus(enum.Enum):

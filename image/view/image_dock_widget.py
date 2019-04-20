@@ -17,10 +17,10 @@ class ImageDockWidget(QDockWidget):
 
     def _init_ui(self):
         self._list_widget = DockerImageListWidget()
-        self._list_widget.clicked.connect(self.on_image_clicked)
+        self._list_widget.clicked.connect(self.on_click)
         self.setWidget(self._list_widget)
 
-    def on_image_clicked(self, prev: QModelIndex = None, next:QModelIndex = None):
+    def on_click(self, prev: QModelIndex = None, next: QModelIndex = None):
         self._signals.dock_widget_selected_signal.emit(self, prev.data(Qt.UserRole))
 
     def list_widget(self):

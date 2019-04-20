@@ -1,6 +1,3 @@
-from PyQt5.QtCore import QObject
-
-
 class ClientModel(object):
     """
     Base class for representing a single object on the GUI

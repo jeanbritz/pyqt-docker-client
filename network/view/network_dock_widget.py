@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, QModelIndex
 from PyQt5.QtWidgets import QDockWidget
 
-from network.view.network_list_widget import NetworkListWidget
+from network.view.network_list_widget import DockerNetworkListWidget
 from qt_signal import GeneralSignals
 
 
@@ -11,16 +11,16 @@ class NetworkDockWidget(QDockWidget):
         super().__init__(*__args)
 
         self._signals = signals
-        self._list_widget: NetworkListWidget = None
+        self._list_widget: DockerNetworkListWidget = None
 
         self._init_ui()
 
     def _init_ui(self):
-        self._list_widget = NetworkListWidget()
-        self._list_widget.clicked.connect(self.on_image_clicked)
+        self._list_widget = DockerNetworkListWidget()
+        self._list_widget.clicked.connect(self.on_click)
         self.setWidget(self._list_widget)
 
-    def on_image_clicked(self, prev: QModelIndex = None, next:QModelIndex = None):
+    def on_click(self, prev: QModelIndex = None, next: QModelIndex = None):
         self._signals.dock_widget_selected_signal.emit(self, prev.data(Qt.UserRole))
 
     def list_widget(self):

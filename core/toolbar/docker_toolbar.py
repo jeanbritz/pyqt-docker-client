@@ -9,10 +9,10 @@ from qt_signal import GeneralSignals, ToolbarSignals
 from core.docker_service import ManagerStatus
 
 
-class DefaultToolbar(QToolBar):
+class DockerToolbar(QToolBar):
 
     def __init__(self, parent = None):
-        super(DefaultToolbar, self).__init__(parent)
+        super(DockerToolbar, self).__init__(parent)
         layout = QVBoxLayout()
         self.setLayout(layout)
         self._signals = ToolbarSignals()
@@ -51,13 +51,13 @@ class DefaultToolbar(QToolBar):
         self._play_action.setEnabled(False)
         self._stop_action.setEnabled(False)
         if isinstance(model, ContainerClientModel):
-            if model.state == ContainerStatus.EXITED.value:
+            if model.state == ContainerStatus.EXITED:
                 self._play_action.setEnabled(True)
-            if model.state == ContainerStatus.RUNNING.value:
+            if model.state == ContainerStatus.RUNNING:
                 self._stop_action.setEnabled(True)
 
     @pyqtSlot(ManagerStatus)
-    def on_docker_manager_status_change(self, status):
+    def on_status_change(self, status):
         if status == ManagerStatus.CONNECTED:
             self._refresh_action.setEnabled(True)
         if status == ManagerStatus.DISCONNECTED:

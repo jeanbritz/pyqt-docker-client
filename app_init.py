@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import QMessageBox, QSpacerItem
 
 from db import Upgrade
 from i18n import Strings
-from util import Log
 from main_window import MainWindow
+from util import Log
 
 
 def handle_exception(exec_type, exec_value, exec_traceback):
@@ -39,6 +39,7 @@ def handle_exception(exec_type, exec_value, exec_traceback):
 def main():
     global app
     global threads
+
     Log.__init__(None)
     Log.i("Performing DB Init")
     upgrade = Upgrade()

@@ -59,7 +59,7 @@ class DockerManager(QObject):
     def refresh_all(self):
         self._signals.refresh_images_signal.emit(self._client.api.images(all=True))
         self._signals.refresh_containers_signal.emit(self._client.api.containers(all=True))
-        self._signals.refresh_networks_signal.emit(self._client.networks.list())
+        self._signals.refresh_networks_signal.emit(self._client.api.networks())
 
     def login(self, username=None, password=None, reauth=False, registry=None):
         try:

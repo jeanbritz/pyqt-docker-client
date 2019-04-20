@@ -1,198 +1,64 @@
-from PyQt5.Qt import QIcon, Qt, QThread, pyqtSlot, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMenuBar, QAction, QDockWidget, QMessageBox
+from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QMainWindow, QMenuBar, QTabWidget, QWidget, QAction, QLabel, QPushButton, QApplication
 
-from environment.view import EnvConnectDialog, EnvConfigureDialog
-from image.view.image_dock_widget import ImageDockWidget
-from image.view import DockerImageDialog, ImagePullDialog
-from network.view import NetworkDockWidget
-from db import DbManager, DaoRegistry, DaoEnvironment
-from core.toolbar import DefaultToolbar
-from default_status_bar import DefaultStatusBar
-from i18n import Strings
-from container import ContainerConsoleDockWidget, ContainerDockWidget
-from environment.view import EnvListWidget
-from core.docker_service import DockerService
-from core.auth import RepositoryLoginDialog
-from qt_signal import GeneralSignals
-from qt_signal.docker_signal import DockerSignals
-from util import DebugConsole, LoadingDialog
+from db import DbManager, DaoEnvironment
 from environment.model import DEnvEnvironment
+from environment.view import EnvConnectDialog
+from i18n import Strings
+from qt_signal import GeneralSignals
+from docker_window import DockerWindow
+from util import Log
 
 
-class MainWindow(QMainWindow):
+class MainWindow(QTabWidget):
 
     def __init__(self):
         super(MainWindow, self).__init__()
-        QThread.currentThread().setObjectName('Main UI Thread')  # threads can be named, useful for log output
+
         self.top: int = 400
         self.left: int = 400
         self.width: int = 600
         self.height: int = 500
 
-        self._debug_console: DebugConsole = None
-        self._loading_dialog: LoadingDialog = None
+        # Db Stuff
+        self._db: DbManager = None
+        self._dao_env: DaoEnvironment = None
 
-        self.environment_menu: QMenuBar = None
-        self.image_menu: QMenuBar = None
-        self.repository_menu: QMenuBar = None
-        self.help_menu: QMenuBar = None
+        # Menu Bars
+        self._environment_menu: QMenuBar = None
+        self._image_menu: QMenuBar = None
+        self._repository_menu: QMenuBar = None
+        self._help_menu: QMenuBar = None
 
-        self.toolbar: DefaultToolbar = None
-        self.status_bar: DefaultStatusBar = None
+        self._init_db()
+        self._init_ui()
 
-        self.image_dock_widget: ImageDockWidget = None
-        self.image_detail_view: DockerImageDialog = None
-
-        self.container_dock_widget: ContainerDockWidget = None
-        self.container_console_widget: ContainerConsoleDockWidget = None
-
-        self.network_dock_widget: NetworkDockWidget = None
-
-        self.docker_service: DockerService = DockerService()
-
-        self.db: DbManager = None
-        self.dao_env: DaoEnvironment = None
-        self.dao_registry: DaoRegistry = None
-
-        self.general_signals = GeneralSignals()
-        self.docker_signals = DockerSignals()
-
-        self.threads = []
-
-        self.env_configure_dialog: EnvConfigureDialog = None
-        self.env_connect_dialog: EnvConnectDialog = None
-        self.image_pull_dialog: ImagePullDialog = None
-        self.login_dialog: RepositoryLoginDialog = None
-
-        self.init_db()
-        self.init_ui()
-
-    def init_ui(self):
-        self._debug_console = DebugConsole()
-
-        self._loading_dialog = LoadingDialog(self)
-        self.general_signals.show_loading_signal.connect(self.show_loading_dialog)
-
+    def _init_ui(self):
         self.setWindowTitle(Strings.APP_NAME)
         self.setWindowIcon(QIcon('assets/docker.svg'))
+        menu_button = QPushButton(QIcon('assets/menu.svg'), "")
+        menu_button.clicked.connect(self.open_env_connect_dialog)
+        self.setCornerWidget(menu_button, Qt.TopLeftCorner)
         self.setGeometry(self.top, self.left, self.width, self.height)
+        self.setTabsClosable(True)
 
-        self.environment_menu = self.menuBar().addMenu(Strings.ENVIRONMENT_MENU)
-        self.environment_menu.addAction(QAction(Strings.CONNECT_ACTION, self, triggered=self.open_env_connect_dialog))
-        self.environment_menu.addAction(QAction(Strings.CONFIGURE_ACTION, self, triggered=self.open_env_config_dialog))
+        self.addTab(QWidget(), "Home")
 
-        self.image_menu = self.menuBar().addMenu(Strings.IMAGE_MENU)
-        self.image_menu.addAction(QAction(Strings.PULL_ACTION, self, triggered=self.open_pull_image_dialog))
-
-        self.repository_menu = self.menuBar().addMenu(Strings.REPOSITORY_MENU)
-        self.repository_menu.addAction(QAction(Strings.LOGIN_ACTION, self, triggered=self.open_login_dialog))
-        self.repository_menu.addAction(QAction(Strings.CONFIGURE_ACTION, self))
-
-        self.help_menu = self.menuBar().addMenu("Help")
-        self.help_menu.addAction(QAction("About &Qt", self,
-                                         statusTip="Show the Qt library's About box",
-                                         triggered=QApplication.instance().aboutQt))
-        self.help_menu.addAction(QAction("About Application", self, triggered=self.about))
-
-        self.init_toolbar()
-        self.init_status_bar()
-
-        self.add_docker_environment_view()
-        self.add_docker_images_view()
-        self.add_container_console_view()
-        self.add_docker_container_view()
-
-        self.add_docker_network_view()
-
-        self.add_debug_console(debug=self._debug_console)
-
-        self.container_dock_widget.list_widget().clicked.connect(self.on_container_clicked)
-
-
-    def init_db(self):
-        self.db = DbManager()
-        self.dao_env = DaoEnvironment(conn=self.db.get_connection())
-        self.dao_registry = DaoRegistry(conn=self.db.get_connection())
-
-    def init_toolbar(self):
-        self.toolbar = DefaultToolbar(self)
-        self.toolbar.signals().clicked_signal.connect(self.docker_service.on_toolbar_action)
-        self.toolbar.signals().refresh_signal.connect(self.docker_service.on_refresh_action)
-        self.docker_service.signals().status_change_signal.connect(self.toolbar.on_docker_manager_status_change)
-        self.addToolBar(self.toolbar)
-
-    def init_status_bar(self):
-        self.status_bar = DefaultStatusBar(self)
-        self.docker_service.signals().status_change_signal.connect(self.status_bar.on_stats_update)
-        self.setStatusBar(self.status_bar)
-
-    def on_image_clicked(self, item = None):
-        self.image_detail_view.set_data(item.data(Qt.UserRole).attrs)
-        self.image_detail_view.show()
-
-    def add_docker_environment_view(self):
-        dock_widget = QDockWidget()
-        env_list_widget = EnvListWidget(dao=self.dao_env, signals=self.docker_signals)
-        self.docker_signals.start_docker_service.connect(self.start_docker_service)
-        dock_widget.setWidget(env_list_widget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, dock_widget)
-
-    def add_docker_images_view(self):
-        self.image_dock_widget = ImageDockWidget(Strings.IMAGES, signals=self.general_signals)
-        self.docker_service.signals().refresh_signal.connect(self.image_dock_widget.list_widget().refresh_images)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.image_dock_widget)
-
-        self.image_detail_view = DockerImageDialog()
-
-    def add_docker_container_view(self):
-        self.container_dock_widget = ContainerDockWidget(Strings.CONTAINERS, signals=self.general_signals, dialog=self.container_console_widget)
-        self.docker_service.signals().refresh_signal.connect(self.container_dock_widget.list_widget().refresh_containers)
-        self.container_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.container_dock_widget)
-
-    def add_docker_network_view(self):
-        self.network_dock_widget = NetworkDockWidget(Strings.NETWORKS, signals=self.general_signals)
-        self.docker_service.signals().refresh_signal.connect(self.network_dock_widget.list_widget().refresh_networks)
-        self.network_dock_widget.signals().dock_widget_selected_signal.connect(self.toolbar.on_dock_widget_focus)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.network_dock_widget)
-
-    def add_container_console_view(self):
-        self.container_console_widget = ContainerConsoleDockWidget("Work Area")
-        self.setCentralWidget(self.container_console_widget)
-
-    def add_debug_console(self, debug=None):
-        dock = QDockWidget("Debug Console", self)
-        dock.setWidget(debug)
-        self.addDockWidget(Qt.BottomDockWidgetArea, dock)
-
-    @pyqtSlot(bool, str, name=GeneralSignals.GENERAL_SHOW_LOADING_SIGNAL)
-    def show_loading_dialog(self, show: bool = False, text: str = None):
-        if show:
-            self._loading_dialog.set_text(text)
-            self._loading_dialog.open()
-        else:
-            self._loading_dialog.set_text(None)
-            self._loading_dialog.close()
-
-    def about(self):
-        QMessageBox.about(self, Strings.ABOUT, "Learning Docker...")
-
-    def open_pull_image_dialog(self):
-        self.image_pull_dialog = ImagePullDialog(parent=self, docker_manager=self.docker_service, db_connection=self.db)
-        self.image_pull_dialog.open()
-
-    def open_login_dialog(self):
-        self.login_dialog = RepositoryLoginDialog(parent=self, docker_manager=self.docker_service)
-        self.login_dialog.open()
+    def _init_db(self):
+        self._db = DbManager()
+        self._dao_env = DaoEnvironment(conn=self._db.get_connection())
 
     def open_env_connect_dialog(self):
-        self.env_connect_dialog = EnvConnectDialog(parent=self, dao=self.dao_env)
-        self.env_connect_dialog.signals().start_docker_service.connect(self.start_docker_service)
-        self.env_connect_dialog.open()
+        env_connect_dialog = EnvConnectDialog(parent=self, dao=self._dao_env)
+        env_connect_dialog.signals().accept_connect_signal.connect(self.connect_success)
+        env_connect_dialog.open()
 
-    def open_env_config_dialog(self):
-        self.env_configure_dialog = EnvConfigureDialog(parent=self, dao=self.dao_env)
-        self.env_configure_dialog.open()
+    @pyqtSlot(DEnvEnvironment, name=GeneralSignals.GENERAL_ACCEPT_CONNECT_SIGNAL)
+    def connect_success(self, env: DEnvEnvironment = None):
+        tab_window = DockerWindow(self, db=self._db, env=env)
+        index = self.addTab(tab_window, env.name)
+        self.setTabEnabled(index + 1, True)
 
     def closeEvent(self, *args, **kwargs):
         """
@@ -202,18 +68,3 @@ class MainWindow(QMainWindow):
         :return:
         """
         self.general_signals.stop_docker_service_signal.emit()
-
-    def on_container_clicked(self, container):
-        pass
-
-    @pyqtSlot(DEnvEnvironment, name=DockerSignals.DOCKER_START_SERVICE_SIGNAL)
-    def start_docker_service(self, env=None):
-        self.docker_service.init_env(env=env)
-        self.general_signals.stop_docker_service_signal.connect(self.docker_service.abort)
-        self.toolbar.signals().refresh_signal.connect(self.docker_service.refresh_all)
-        thread = QThread()
-        thread.setObjectName("DockerService")
-        self.docker_service.moveToThread(thread)
-        thread.started.connect(self.docker_service.run)
-        thread.start()
-        self.threads.append(thread)
