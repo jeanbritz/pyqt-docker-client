@@ -63,8 +63,7 @@ class DockerWindow(QMainWindow):
 
         self._init_dao()
         self._init_ui()
-        self._queue = {}
-        self.start_docker_service(env=self._env, queue=self._queue)
+        self.start_docker_service(env=self._env)
 
     def _init_dao(self):
         self._dao_env = DaoEnvironment(conn=self._db.get_connection())
@@ -110,7 +109,7 @@ class DockerWindow(QMainWindow):
 
         self._add_dock_widgets()
         self.add_debug_console(debug=self._debug_console)
-        self.add_container_console_view()
+
 
 
 
@@ -137,8 +136,11 @@ class DockerWindow(QMainWindow):
         self.addDockWidget(Qt.RightDockWidgetArea, dock_widget)
         self._dock_widgets[Strings.NETWORKS] = dock_widget
 
-    def add_container_console_view(self):
-        self.container_console_widget = WorkAreaDockWidget("Work Area")
+        self.general_signals.dock_widget_selected_signal.connect(self.on_dock_widget_focus)
+
+    def set_container_work_area_view(self, client=None, model=None):
+        self.container_console_widget = WorkAreaDockWidget("Work Area", client=client, model=model)
+
         self.setCentralWidget(self.container_console_widget)
 
     def add_debug_console(self, debug=None):
@@ -170,10 +172,14 @@ class DockerWindow(QMainWindow):
         self.env_configure_dialog = EnvConfigureDialog(parent=self, dao=self._dao_env)
         self.env_configure_dialog.open()
 
+    @pyqtSlot(QDockWidget, ClientModel, name=GeneralSignals.GENERAL_DOCK_WIDGET_SELECTED_SIGNAL)
+    def on_dock_widget_focus(self, widget: QDockWidget, model: ClientModel):
+        if isinstance(model, ContainerClientModel):
+            self.set_container_work_area_view(client=self._docker_service.client(), model=model)
+
     @pyqtSlot(DEnvEnvironment, name=DockerSignals.DOCKER_START_SERVICE_SIGNAL)
-    def start_docker_service(self, env=None, queue=None):
+    def start_docker_service(self, env=None):
         self._docker_service.init_env(env=env)
-        self.general_signals.stop_docker_service_signal.connect(self._docker_service.abort)
         thread = QThread()
         thread.setObjectName("Docker Service for %s" % env.name)
         self._docker_service.moveToThread(thread)
@@ -193,3 +199,8 @@ class DockerWindow(QMainWindow):
             thread.start()
         except APIError as e:
             print("DockerManager :: API Error :: %s" % e)
+
+    def close(self):
+        super().close()
+        self._docker_service.abort()
+

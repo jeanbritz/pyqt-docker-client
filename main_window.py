@@ -21,6 +21,8 @@ class MainWindow(QTabWidget):
         self.width: int = 600
         self.height: int = 500
 
+        self._tabs = []
+
         # Db Stuff
         self._db: DbManager = None
         self._dao_env: DaoEnvironment = None
@@ -42,7 +44,7 @@ class MainWindow(QTabWidget):
         self.setCornerWidget(menu_button, Qt.TopLeftCorner)
         self.setGeometry(self.top, self.left, self.width, self.height)
         self.setTabsClosable(True)
-
+        self.tabCloseRequested.connect(self.close_tab)
         self.addTab(QWidget(), "Home")
 
     def _init_db(self):
@@ -57,8 +59,17 @@ class MainWindow(QTabWidget):
     @pyqtSlot(DEnvEnvironment, name=GeneralSignals.GENERAL_ACCEPT_CONNECT_SIGNAL)
     def connect_success(self, env: DEnvEnvironment = None):
         tab_window = DockerWindow(self, db=self._db, env=env)
+        self._tabs.append(tab_window)
         index = self.addTab(tab_window, env.name)
         self.setTabEnabled(index + 1, True)
+
+    def close_tab(self, index):
+        tab = self.widget(index)
+        if tab is not None:
+            tab.deleteLater()
+            tab.close()
+        self.removeTab(index)
+        self._tabs.remove(tab)
 
     def closeEvent(self, *args, **kwargs):
         """
@@ -67,4 +78,7 @@ class MainWindow(QTabWidget):
         :param kwargs:
         :return:
         """
-        self.general_signals.stop_docker_service_signal.emit()
+        for tab in self._tabs:
+            tab.closeEvent()
+
+        self._tabs.clear()
