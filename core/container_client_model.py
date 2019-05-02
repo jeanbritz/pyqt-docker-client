@@ -1,4 +1,5 @@
 from core import ClientModel
+from core.docker_enum import ContainerStatus
 
 
 class ContainerClientModel(ClientModel):
@@ -75,7 +76,7 @@ class ContainerClientModel(ClientModel):
         Container state
         :return:
         """
-        return self.details.get(self.ATTR_STATE)
+        return ContainerStatus.from_str(self.details.get(self.ATTR_STATE))
 
     @property
     def status(self):

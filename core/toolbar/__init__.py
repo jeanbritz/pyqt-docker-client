@@ -1,1 +1,1 @@
-from core.toolbar.default_toolbar import DefaultToolbar
+from core.toolbar.docker_toolbar import DockerToolbar

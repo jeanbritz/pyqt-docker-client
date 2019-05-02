@@ -1,3 +1,3 @@
 from network.view.network_dock_widget import NetworkDockWidget
-from network.view.network_list_widget import NetworkListWidgetItem
+from network.view.network_list_widget import DockerNetworkListWidgetItem
 

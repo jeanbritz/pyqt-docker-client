@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QDialog, QLayout, QGroupBox, QVBoxLayout, QFormLayou
     QDialogButtonBox, QComboBox
 from PyQt5.QtCore import Qt
 
-from qt_signal.docker_signal import DockerSignals
+from qt_signal import GeneralSignals
 
 
 class EnvConnectDialog(QDialog):
@@ -25,7 +25,7 @@ class EnvConnectDialog(QDialog):
         self._cert_path_text_box: QLineEdit = None
 
         self._env_data = None
-
+        self._signals = GeneralSignals()
         self._dao = dao
         self._init_ui()
 
@@ -92,7 +92,7 @@ class EnvConnectDialog(QDialog):
 
     def accept(self):
         selected = self._env_combo_box.currentData()
-        self._signals.start_docker_service.emit(selected)
+        self._signals.accept_connect_signal.emit(selected)
         super().reject()
 
     def reject(self):
